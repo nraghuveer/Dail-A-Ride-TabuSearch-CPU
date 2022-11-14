@@ -61,10 +61,9 @@ class Request:
             elif i == PICKUP_OR_DROPOFF_TIME:
                 self.__time = val
             elif i == ISPICK_TIME:
-                if val == 1:
-                    self.pickup_time = self.__time
-                    # dropoff = alpha * maxride + pickup
-                    self.dropoff_time = int(ALPHA * self.mrt) + self.pickup_time
+                self.pickup_time = self.__time
+                # dropoff = alpha * maxride + pickup
+                self.dropoff_time = int(ALPHA * self.mrt) + self.pickup_time
 
     def src_point(self):
         return (self.src_x, self.src_y)
@@ -96,6 +95,7 @@ def getRequests():
 
     requests = []
     with open(filepath, 'r') as f:
+        # first line is the depot
         for id, line in enumerate(f.readlines()):
             requests.append(Request(id, line, service_time, area_of_service))
     return requests

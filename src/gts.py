@@ -1,6 +1,7 @@
 from typing import List, Dict, Tuple
 from itertools import product
 from parse_requests import Request, getRequests
+from assignment_problem import run_assignment_problem
 
 Point = Tuple[int, int]
 
@@ -30,6 +31,7 @@ c_ij < T_Gran
 
 class GTS:
     def __init__(self) -> None:
+        self.service_duration = 120 # for now
         self.requests: List[Request] = getRequests()
         # build coordinates
         # each request has both pickup and dropoff coordinates
@@ -60,7 +62,13 @@ class GTS:
             tw[-id] = (req.dropoff_time, req.dropoff_time + offset)
         self.tw = tw
 
+        """ wait times -> for now keep it 150 seconds, there is no wait times for drop nodes"""
+        self.w = {req.id: 150 for req in self.requests}
+
     def start(self):
+        run_assignment_problem(self)
+
+    def print_adt(self):
         # calculate _D_ij for all node combinations
         results = []
         for pointI, pointJ in product(self.requests, self.requests[1:]):
@@ -113,6 +121,7 @@ class GTS:
         e, _ = self.service_time[i_arr]
         t = self.trave_time[(i_arr, i_dep)]
         return (a - e) / t
+
 
     # def objective_function(self):
     #     cust = []
