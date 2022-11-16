@@ -8,16 +8,18 @@ from pprint import pprint
 from scipy.optimize import linear_sum_assignment
 import numpy as np
 
-def build_graph(gts, noof_vehicles=2):
-    r = len(gts.requests) # 0....r, r+1....r+n+1
-    n = len(gts.requests) + noof_vehicles
-    print(f"n = {len(gts.requests)} | m = {noof_vehicles}")
+
+def build_graph(gts, r, m):
+    n = len(gts.requests) + m
     # r = 11, n = 10 + 3 + 1
     # 1...10,11,12,13
-    def isV(x): return x >= r  # returns true if the node is vehicle
-    def isR(x): return not isV(x)  # returns true if the node is request
+    def isV(x):
+        return x >= r  # returns true if the node is vehicle
 
-    graph = [[float('inf') for _ in range(n)] for _ in range(n)]
+    def isR(x):
+        return not isV(x)  # returns true if the node is request
+
+    graph = [[float("inf") for _ in range(n)] for _ in range(n)]
     for i in range(n):
         for j in range(n):
             if i == j:
@@ -26,8 +28,8 @@ def build_graph(gts, noof_vehicles=2):
             # use average departure time
             elif isR(i) and isR(j):
                 graph[i][j] = gts.adt(i, j)
-            elif isV(i) and isV(j): # both are vehicles
-                continue # inf will be value
+            elif isV(i) and isV(j):  # both are vehicles
+                continue  # inf will be value
             elif isV(i) and isR(j):
                 # V * R
                 t_0j = gts.travel_time(0, j)
@@ -40,8 +42,9 @@ def build_graph(gts, noof_vehicles=2):
                 graph[i][j] = gts.service_duration - gts.e(-i) - t - gts.d[-i]
     return graph
 
+
 def run_assignment_problem(gts):
-    graph = build_graph(gts)
+    graph = build_graph(gts, len(gts.requests), 2)
     # print(graph)
     graph = np.array(graph)
     rows, cols = linear_sum_assignment(graph, maximize=False)
