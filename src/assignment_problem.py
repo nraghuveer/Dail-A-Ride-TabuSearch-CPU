@@ -4,17 +4,40 @@ So we build a graph where each request is node and each vehicle is also a node
 Arc weights is adt' is defined by (20) in the paper
 (adt') is refered as `D bar ij`
 """
+from collections import defaultdict
 from pprint import pprint
 from scipy.optimize import linear_sum_assignment
 import numpy as np
 
 
-def build_graph(gts, r, m):
-    N = r + m
+def build_routes(n, m, rows, cols):
+    routes = defaultdict(list)
+    graph = defaultdict(list)
+    for u, v in zip(rows, cols):
+        graph[u].append(v)
+        graph[v].append(u)
+
+    def dfs(u, route, visited):
+        for v in graph[u]:
+            if v not in visited:
+                visited.add(v)
+                route.append(v)
+                dfs(v, route, visited)
+
+    for v in range(n, n + m):
+        route = routes[v]
+        visited = set([v])
+        dfs(v, route, visited)
+
+    return routes
+
+
+def build_graph(gts, n, m):
+    N = n + m
     # r = 11, n = 10 + 3 + 1
     # 1...10,11,12,13
     def isV(x):
-        return x >= r  # returns true if the node is vehicle
+        return x >= n  # returns true if the node is vehicle
 
     def isR(x):
         return not isV(x)  # returns true if the node is request
@@ -48,4 +71,7 @@ def run_assignment_problem(gts):
     # print(graph)
     graph = np.array(graph)
     rows, cols = linear_sum_assignment(graph, maximize=False)
-    pprint(list(zip(rows, cols)))
+    # pprint(list(zip(rows, cols)))
+    routes = build_routes(len(gts.requests), 2, rows, cols)
+    print(routes)
+    print("done")
