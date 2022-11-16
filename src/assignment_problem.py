@@ -10,7 +10,7 @@ import numpy as np
 
 
 def build_graph(gts, r, m):
-    n = len(gts.requests) + m
+    N = r + m
     # r = 11, n = 10 + 3 + 1
     # 1...10,11,12,13
     def isV(x):
@@ -19,9 +19,9 @@ def build_graph(gts, r, m):
     def isR(x):
         return not isV(x)  # returns true if the node is request
 
-    graph = [[float("inf") for _ in range(n)] for _ in range(n)]
-    for i in range(n):
-        for j in range(n):
+    graph = [[float("inf") for _ in range(N)] for _ in range(N)]
+    for i in range(N):
+        for j in range(N):
             if i == j:
                 continue
             # if both i and j are requests
