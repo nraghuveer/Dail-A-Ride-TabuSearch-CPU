@@ -65,6 +65,11 @@ class GTS:
         """ wait times -> for now keep it 150 seconds, there is no wait times for drop nodes"""
         self.w = {req.id: 150 for req in self.requests}
 
+    def e(self, x):
+        return self.tw[x][0]
+    def l(self, x):
+        return self.tw[x][1]
+
     def start(self):
         run_assignment_problem(self)
 
@@ -89,38 +94,36 @@ class GTS:
     def adt(self, i: int, j: int):
         """ returns D~_ij """
         """ This is used measure spatial and temoral distance between two requests i and j"""
-
         # Following are possible sequences
         # i+, i-, j+, j- => pi1
         # i+, j+, i-, j- => pi2
         # i+, j+, j-, i- => pi3
         def for_sequence(one, two, three, four):
-            start_tw = self.tw[one][0]
-            return start_tw + self.d[one] + \
+            if one < 0:
+                raise ValueError("the start point in the sequence should be always be arrival node")
+
+            return self.e(one) + self.d[one] + \
                 self.travel_time(one, two) + self.d[two] + \
                 self.travel_time(two, three) + self.d[three] + \
                 self.travel_time(three, four) + self.d[four]
 
         # since j+ is arrival node here, if we arrive early than the actual arrival
         # we have to wait till the arrival
-        # TODO: fix this
-        wait_time_at_j = 0
+        # TODO: D_pi hosuld be set to inf, if the time or load constraints are not respected
+        wait_time_at_j = self.w[j]
         D_pi1 = for_sequence(i, -i, j, -j) + wait_time_at_j
         D_pi2 = for_sequence(i, j, -i, -j) + wait_time_at_j
         D_pi3 = for_sequence(i, j, -j, -i) + wait_time_at_j
 
-        # TODO: check if load or time constraints are respected at each node
-        # for now, assume all sequences are feasible
         return D_pi1 + D_pi2 + D_pi3
 
-    def get_service_quality(self, i_arr, i_dep):
-        # end of time window at destination
-        a = self.time_windows[i_dep]
-
-        # start of service time at arrival
-        e, _ = self.service_time[i_arr]
-        t = self.trave_time[(i_arr, i_dep)]
-        return (a - e) / t
+    # def get_service_quality(self, i_arr, i_dep):
+    #     # end of time window at destination
+    #     a = self.time_windows[i_dep]
+    #     # start of service time at arrival
+    #     e, _ = self.service_time[i_arr]
+    #     t = self.trave_time[(i_arr, i_dep)]
+    #     return (a - e) / t
 
 
     # def objective_function(self):
