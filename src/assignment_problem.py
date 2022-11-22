@@ -10,7 +10,7 @@ from scipy.optimize import linear_sum_assignment
 import numpy as np
 
 
-def build_routes(n, m, rows, cols):
+def build_initial_routes(n, m, rows, cols):
     routes = defaultdict(list)
     graph = defaultdict(list)
     for u, v in zip(rows, cols):
@@ -65,13 +65,16 @@ def build_graph(gts, n, m):
                 graph[i][j] = gts.service_duration - gts.e(-i) - t - gts.d[-i]
     return graph
 
-
 def run_assignment_problem(gts):
     graph = build_graph(gts, len(gts.requests), 2)
     # print(graph)
     graph = np.array(graph)
     rows, cols = linear_sum_assignment(graph, maximize=False)
     # pprint(list(zip(rows, cols)))
-    routes = build_routes(len(gts.requests), 2, rows, cols)
+    # set the arcs used in solution to 0
+    for u, v in zip(rows, cols):
+        graph[u, v] = 0
+
+    routes = build_initial_routes(len(gts.requests), 2, rows, cols)
     print(routes)
     print("done")
