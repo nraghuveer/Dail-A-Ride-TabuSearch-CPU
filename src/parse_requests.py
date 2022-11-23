@@ -88,14 +88,13 @@ class Request:
 def sqKm_to_sqMiles(km: float) -> float:
     return km * 0.386102
 
-def getRequests():
-    filepath = "DARPDATASET/Temportal-DS/nCustomers_50/Temporal_SD2hrs_SA10km.txt"
-    service_time = 120 # minutes
-    area_of_service = sqKm_to_sqMiles(10) # square km
-
+def getRequests(noof_customers, service_time_hrs, area_of_service_kms):
+    service_time = service_time_hrs * 60 # minutes
+    area_of_service = sqKm_to_sqMiles(area_of_service_kms) # square km
+    filepath = f"DARPDATASET/Temportal-DS/nCustomers_{noof_customers}/Temporal_SD{service_time_hrs}hrs_SA{area_of_service_kms}km.txt"
     requests = []
     with open(filepath, 'r') as f:
         # first line is the depot
         for id, line in enumerate(f.readlines()):
-            requests.append(Request(id, line, service_time, area_of_service))
+            requests.append(Request(id, line, service_time, int(area_of_service)))
     return requests

@@ -31,11 +31,12 @@ c_ij < T_Gran
 
 
 class GTS:
-    def __init__(self, noof_customers: int, area_of_service: int, service_duration: int) -> None:
+    def __init__(self, noof_customers: int, service_duration: int, area_of_service: int) -> None:
+        print(noof_customers, service_duration, area_of_service)
         self.service_duration = service_duration 
         self.noof_customers = noof_customers
         self.area_of_service = area_of_service
-        self.requests: List[Request] = getRequests()
+        self.requests: List[Request] = getRequests(self.noof_customers, self.service_duration, self.area_of_service)
         # build coordinates
         # each request has both pickup and dropoff coordinates
         # use +req.id as pickup as -req.id as dropoff
