@@ -32,8 +32,7 @@ c_ij < T_Gran
 
 class GTS:
     def __init__(self, noof_customers: int, service_duration: int, area_of_service: int) -> None:
-        print(noof_customers, service_duration, area_of_service)
-        self.service_duration = service_duration 
+        self.service_duration = service_duration
         self.noof_customers = noof_customers
         self.area_of_service = area_of_service
         self.requests: List[Request] = getRequests(self.noof_customers, self.service_duration, self.area_of_service)

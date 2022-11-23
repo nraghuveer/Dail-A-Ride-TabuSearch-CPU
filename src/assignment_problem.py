@@ -9,37 +9,55 @@ from scipy.optimize import linear_sum_assignment
 from pyvis.network import Network
 import numpy as np
 
-def visualize_graph(n, m, rows, cols):
-    net = Network()
+
+def add_fixed_nodes(net, n, m, gts):
     for x in range(n):
-        net.add_node(str(x), label=str(x), group=1)
+        print(f"adding {x}")
+        request = gts.requests[x]
+        xp, yp = request.src_point()
+        group = 1 if x == 0 else 2
+        net.add_node(str(x), label=str(x), group=group, x=xp*200, y=yp*200, physics=False)
     for x in range(n, n+m):
-        net.add_node(str(x), label=str(x), size=20, group=2)
+        print(f"adding {x}")
+        net.add_node(str(x), label=str(x), size=20, group=3)
+
+def visualize_graph(n, m, rows, cols, gts):
+    net = Network()
+    add_fixed_nodes(net, n, m, gts)
     for u, v in zip(rows, cols):
         net.add_edge(str(u), str(v))
     net.show("net.html")
 
-def build_initial_routes(n, m, rows, cols):
-    routes = defaultdict(list)
+def build_paths(n, m, rows, cols):
     graph = defaultdict(list)
     for u, v in zip(rows, cols):
         graph[u].append(v)
-        graph[v].append(u)
 
-    def dfs(u, route, visited):
+    def dfs(u, visited, path):
+        path.append(u)
         for v in graph[u]:
             if v not in visited:
                 visited.add(v)
-                route.append(v)
-                dfs(v, route, visited)
+                dfs(v, visited, path)
+        return
+        
+    paths = []
+    visited = set()
+    for v in range(n, n+m):
+        if v in visited:
+            continue
+        path = []
+        dfs(v, visited, path)
+        paths.append(path)
 
-    # TODO: some routes might not be include any vehicle
-    for v in range(n, n + m):
-        route = routes[v]
-        visited = set([v])
-        dfs(v, route, visited)
-
-    return routes
+    for u in range(n):
+        if u in visited:
+            continue
+        path = []
+        dfs(u, visited, path)
+        paths.append(path)
+    return paths
+   
 
 
 def build_graph(gts, n, m):
@@ -85,11 +103,9 @@ def run_assignment_problem(gts):
     for u, v in zip(rows, cols):
         graph[u, v] = 0
 
-    visualize_graph(len(gts.requests), 2, rows, cols)
-    routes = build_initial_routes(len(gts.requests), 2, rows, cols)
+    n, m = len(gts.requests), 2
+    visualize_graph(n, m, rows, cols, gts)
+    routes = build_paths(n, m, rows, cols)
     print(routes)
-    # for row in graph:
-    #     print(row)
-    # print(sum(map(len, routes)))
     return routes
 
