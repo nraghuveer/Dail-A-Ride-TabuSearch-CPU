@@ -9,23 +9,27 @@ from scipy.optimize import linear_sum_assignment
 from pyvis.network import Network
 import numpy as np
 
+def add_fixed_node(net, n, x, gts, group):
+    if x < n:
+            p = gts.requests[x].src_point()
+    else:
+        p = gts.requests[0].src_point()
+    xp, yp = p
+    net.add_node(str(x), label=str(x), size=20, x=xp*200,
+                 y=yp*200, physics=False, group=group)
 
-def add_fixed_nodes(net, n, m, gts):
-    for x in range(n):
-        print(f"adding {x}")
-        request = gts.requests[x]
-        xp, yp = request.src_point()
-        group = 1 if x == 0 else 2
-        net.add_node(str(x), label=str(x), group=group, x=xp*200, y=yp*200, physics=False)
-    for x in range(n, n+m):
-        print(f"adding {x}")
-        net.add_node(str(x), label=str(x), size=20, group=3)
-
-def visualize_graph(n, m, rows, cols, gts):
+def visualize_graph(n, gts, routes):
     net = Network()
-    add_fixed_nodes(net, n, m, gts)
-    for u, v in zip(rows, cols):
-        net.add_edge(str(u), str(v))
+    added = set()
+    for g, route in enumerate(routes, 1):
+        for u, v in zip(route, route[1:]):
+            if u not in added:
+                add_fixed_node(net, n, u, gts, group=g)
+                added.add(u)
+            if v not in added:
+                add_fixed_node(net, n, v, gts, group=g)
+                added.add(v)
+            net.add_edge(str(u), str(v))
     net.show("net.html")
 
 def build_paths(n, m, rows, cols):
@@ -94,18 +98,16 @@ def build_graph(gts, n, m):
     return graph
 
 def run_assignment_problem(gts):
-    graph = build_graph(gts, len(gts.requests), 2)
-    # print(graph)
+    n, m = len(gts.requests), 2
+    graph = build_graph(gts,n, m)
     graph = np.array(graph)
     rows, cols = linear_sum_assignment(graph, maximize=False)
-    # pprint(list(zip(rows, cols)))
     # set the arcs used in solution to 0
     for u, v in zip(rows, cols):
         graph[u, v] = 0
 
-    n, m = len(gts.requests), 2
-    visualize_graph(n, m, rows, cols, gts)
     routes = build_paths(n, m, rows, cols)
+    visualize_graph(n, gts, routes)
     print(routes)
     return routes
 
