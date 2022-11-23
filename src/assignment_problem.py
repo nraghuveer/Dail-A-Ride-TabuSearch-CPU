@@ -5,10 +5,19 @@ Arc weights is adt' is defined by (20) in the paper
 (adt') is refered as `D bar ij`
 """
 from collections import defaultdict
-from pprint import pprint
 from scipy.optimize import linear_sum_assignment
+from pyvis.network import Network
 import numpy as np
 
+def visualize_graph(n, m, rows, cols):
+    net = Network()
+    for x in range(n):
+        net.add_node(str(x), label=str(x), group=1)
+    for x in range(n, n+m):
+        net.add_node(str(x), label=str(x), size=20, group=2)
+    for u, v in zip(rows, cols):
+        net.add_edge(str(u), str(v))
+    net.show("net.html")
 
 def build_initial_routes(n, m, rows, cols):
     routes = defaultdict(list)
@@ -24,6 +33,7 @@ def build_initial_routes(n, m, rows, cols):
                 route.append(v)
                 dfs(v, route, visited)
 
+    # TODO: some routes might not be include any vehicle
     for v in range(n, n + m):
         route = routes[v]
         visited = set([v])
@@ -75,6 +85,11 @@ def run_assignment_problem(gts):
     for u, v in zip(rows, cols):
         graph[u, v] = 0
 
+    visualize_graph(len(gts.requests), 2, rows, cols)
     routes = build_initial_routes(len(gts.requests), 2, rows, cols)
     print(routes)
-    print("done")
+    # for row in graph:
+    #     print(row)
+    # print(sum(map(len, routes)))
+    return routes
+

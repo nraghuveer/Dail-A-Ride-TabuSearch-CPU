@@ -1,3 +1,4 @@
+import argparse
 from typing import List, Dict, Tuple
 from itertools import product
 from parse_requests import Request, getRequests
@@ -30,8 +31,10 @@ c_ij < T_Gran
 
 
 class GTS:
-    def __init__(self) -> None:
-        self.service_duration = 120 # for now
+    def __init__(self, noof_customers: int, area_of_service: int, service_duration: int) -> None:
+        self.service_duration = service_duration 
+        self.noof_customers = noof_customers
+        self.area_of_service = area_of_service
         self.requests: List[Request] = getRequests()
         # build coordinates
         # each request has both pickup and dropoff coordinates
@@ -138,7 +141,12 @@ class GTS:
     #     return sum(cust)
 
 if __name__ == "__main__":
-    gts = GTS()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-n', '--noof_customers', required=True, type=int, help='noof customers')
+    parser.add_argument('-d', '--service_duration', type=int, help='service duration', required=True)
+    parser.add_argument('-a', '--area_of_service', type=int, help='area of service', required=True)
+    args = parser.parse_args()
+    gts = GTS(args.noof_customers, args.service_duration, args.area_of_service)
     gts.start()
 
 
