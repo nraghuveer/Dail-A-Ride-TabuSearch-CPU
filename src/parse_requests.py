@@ -39,6 +39,8 @@ class Request:
 
         self.service_duration = service_duration
         self.area_of_service = area_of_service
+        # load => number of passengers/items to take from pickup to dropoff
+        self.load = 1
 
         parts = filter(lambda x: x!="", line.split("\t"))
         for i, x in enumerate(parts):
@@ -97,4 +99,5 @@ def getRequests(noof_customers, service_time_hrs, area_of_service_kms):
         # first line is the depot
         for id, line in enumerate(f.readlines()):
             requests.append(Request(id, line, service_time, int(area_of_service)))
+
     return requests

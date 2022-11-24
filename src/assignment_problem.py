@@ -10,12 +10,14 @@ from pyvis.network import Network
 import numpy as np
 
 def add_fixed_node(net, n, x, gts, group):
+    label = str(x)
     if x < n:
-            p = gts.requests[x].src_point()
+        p = gts.requests[x].src_point()
+        label += " | " + str(gts.requests[x].pickup_time)
     else:
         p = gts.requests[0].src_point()
     xp, yp = p
-    net.add_node(str(x), label=str(x), size=20, x=xp*200,
+    net.add_node(str(x), label=label, size=20, x=xp*200,
                  y=yp*200, physics=False, group=group)
 
 def visualize_graph(n, gts, routes):
@@ -64,7 +66,8 @@ def build_paths(n, m, rows, cols):
    
 
 
-def build_graph(gts, n, m):
+def build_graph(gts):
+    n, m = gts.n, gts.m
     N = n + m
     # r = 11, n = 10 + 3 + 1
     # 1...10,11,12,13
@@ -98,8 +101,8 @@ def build_graph(gts, n, m):
     return graph
 
 def run_assignment_problem(gts):
-    n, m = len(gts.requests), 2
-    graph = build_graph(gts,n, m)
+    n, m = gts.n, gts.m
+    graph = build_graph(gts)
     graph = np.array(graph)
     rows, cols = linear_sum_assignment(graph, maximize=False)
     # set the arcs used in solution to 0
