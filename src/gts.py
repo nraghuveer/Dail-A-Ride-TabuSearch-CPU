@@ -235,27 +235,20 @@ class GTS:
 
         if check_constraints(seq1):
             D_pi1 = for_sequence(*seq1) + wait_time_at_j 
-            k_pi1 = 1
         else:
             D_pi1 = float("inf")
-            k_pi1 = 0
 
         if check_constraints(seq2):
             D_pi2 = for_sequence(*seq2) + wait_time_at_j
-            k_pi2 = 1
         else:
             D_pi2 = float("inf")
-            k_pi2 = 0
 
         if check_constraints(seq3):
             D_pi3 = for_sequence(*seq3) + wait_time_at_j
-            k_pi3 = 0
         else:
             D_pi3 = float("inf")
-            k_pi3 = 0
 
-        args = [(D_pi1, k_pi1), (D_pi2, k_pi2), (D_pi3, k_pi3)]
-        return sum(map(lambda x: (x[0]*x[1])/x[1], args))
+        return sum(D for D in [D_pi1, D_pi2, D_pi3] if D != float('inf'))
 
     # def get_service_quality(self, i_arr, i_dep):
     #     # end of time window at destination

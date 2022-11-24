@@ -110,6 +110,8 @@ def run_assignment_problem(gts):
         graph[u, v] = 0
 
     routes = build_paths(n, m, rows, cols)
+    print(len(routes))
+    print(routes)
     visualize_graph(n, gts, routes)
     print(routes)
     return routes
