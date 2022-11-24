@@ -20,7 +20,8 @@ def add_fixed_node(net, n, x, gts, group):
     net.add_node(str(x), label=label, size=20, x=xp*200,
                  y=yp*200, physics=False, group=group)
 
-def visualize_graph(n, gts, routes):
+def visualize_graph(gts, routes):
+    n = gts.n
     net = Network()
     added = set()
     for g, route in enumerate(routes, 1):
@@ -64,19 +65,11 @@ def build_paths(n, m, rows, cols):
         paths.append(path)
     return paths
    
-
-
 def build_graph(gts):
     n, m = gts.n, gts.m
     N = n + m
     # r = 11, n = 10 + 3 + 1
     # 1...10,11,12,13
-    def isV(x):
-        return x >= n  # returns true if the node is vehicle
-
-    def isR(x):
-        return not isV(x)  # returns true if the node is request
-
     graph = [[float("inf") for _ in range(N)] for _ in range(N)]
     for i in range(N):
         for j in range(N):
@@ -84,16 +77,16 @@ def build_graph(gts):
                 continue
             # if both i and j are requests
             # use average departure time
-            elif isR(i) and isR(j):
+            elif gts.isR(i) and gts.isR(j):
                 graph[i][j] = gts.adt(i, j)
-            elif isV(i) and isV(j):  # both are vehicles
+            elif gts.isV(i) and gts.isV(j):  # both are vehicles
                 continue  # inf will be value
-            elif isV(i) and isR(j):
+            elif gts.isV(i) and gts.isR(j):
                 # V * R
                 t_0j = gts.travel_time(0, j)
                 wait_time = max(gts.e(j) - gts.e(0) - t_0j, 0)
                 graph[i][j] = gts.e(0) + wait_time + t_0j + gts.d[j]
-            elif isR(i) and isV(j):
+            elif gts.isR(i) and gts.isV(j):
                 # R * V
                 # end of time window at depot? is total ride time?
                 t = gts.travel_time(-i, 0)
@@ -110,9 +103,5 @@ def run_assignment_problem(gts):
         graph[u, v] = 0
 
     routes = build_paths(n, m, rows, cols)
-    print(len(routes))
-    print(routes)
-    visualize_graph(n, gts, routes)
-    print(routes)
     return routes
 

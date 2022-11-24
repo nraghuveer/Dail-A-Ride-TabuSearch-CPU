@@ -2,7 +2,7 @@ import argparse
 from typing import List, Dict, Tuple
 from itertools import product
 from parse_requests import Request, getRequests
-from assignment_problem import run_assignment_problem
+from assignment_problem import run_assignment_problem, visualize_graph
 
 Point = Tuple[int, int]
 
@@ -36,6 +36,13 @@ c_ij < T_Gran
 
 
 class GTS:
+    def print_config(self):
+        print(f"number of requests => {self.n}")
+        print(f"number of vehicles => {self.m}")
+        print(f"Capacity of each vechicle => {self.Q}")
+        print(f"area of service => {self.area_of_service}")
+        print(f"service duration => {self.service_duration}")
+        
     def __init__(self, noof_customers: int, service_duration: int, area_of_service: int,
                  noof_vehicles: int) -> None:
         self.service_duration = service_duration
@@ -55,7 +62,7 @@ class GTS:
         self.m = self.noof_vehciles
         self.start_depot = 0
         self.end_depot = 2*self.n + 1
-        self.Q = 5  # capacity of each vechicle
+        self.Q = 4  # capacity of each vechicle
 
         # build coordinates
         # each request has both pickup and dropoff coordinates
@@ -113,7 +120,16 @@ class GTS:
         return self.tw[x][1]
 
     def start(self):
-        run_assignment_problem(self)
+        routes = run_assignment_problem(self)
+        print("*"*30)
+        print(len(routes))
+        for r in routes:
+            if r and self.isV(r[0]):
+                print(f"Main path => {r}")
+            else:
+                print(f"Sub tour => {r}")
+
+        visualize_graph(self, routes)
 
     def print_adt(self):
         # calculate _D_ij for all node combinations
@@ -203,7 +219,13 @@ class GTS:
             if not (self.q[i] <= y[i] <= self.Q):
                 return False
         return True
-               
+
+    def isV(self, x):
+        return x >= self.n  # returns true if the node is vehicle
+
+    def isR(self, x):
+        return not self.isV(x)  # returns true if the node is request
+              
     def adt(self, i: int, j: int):
         """ returns D~_ij """
         """ This is used measure spatial and temoral distance between two requests i and j"""
