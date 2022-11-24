@@ -10,12 +10,12 @@ from pyvis.network import Network
 import numpy as np
 
 def add_fixed_node(net, n, x, gts, group):
-    label = str(x)
     if x < n:
         p = gts.requests[x].src_point()
-        label += " | " + str(gts.requests[x].pickup_time)
+        label = f"{p} | " + str(gts.requests[x].pickup_time)
     else:
         p = gts.requests[0].src_point()
+        label = f"{p} | " + str(gts.requests[0].pickup_time)
     xp, yp = p
     net.add_node(str(x), label=label, size=20, x=xp*200,
                  y=yp*200, physics=False, group=group)
