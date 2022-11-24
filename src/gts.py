@@ -101,8 +101,10 @@ class GTS:
         self.tw = tw
 
         """ wait times -> for now keep it 150 seconds, there is no wait times for drop nodes"""
-        self.w = {req.id: 150 for req in self.requests}
-
+        self.w = {}
+        for req in self.requests:
+            self.w[req.id] = 0
+            self.w[-req.id] = 150
 
     def e(self, x):
         return self.tw[x][0]
@@ -131,6 +133,50 @@ class GTS:
         ptwo = self.coords[two]
         return abs(pone[0]-ptwo[0]) + abs(pone[1]-ptwo[1])
 
+    def check_time_feasibility(self, seq: List[int]):
+        # 7-10 => ensure correct arrival, service and departure time
+        # 7 -> for i, j => arrival at j <= start of service at j
+        # departure from i + time for i-j = Arrival time at j <= start of service at j
+        A = {}
+        B = {}
+        D = {}
+        i = seq[0]
+        A[i] = self.e(i)
+        B[i] = A[i] + self.w[i] # w[i] will be zero if the i is pickup
+        D[i] = B[i] + self.d[i]
+        for i, j in zip(seq, seq[1:]):
+            # there might be some wait time if the node is pickup
+            A[j] = D[i] + self.travel_time(i, j)
+            B[j] = A[j] + self.w[j]
+            D[j] = B[j] + self.d[j]
+
+        # Equation 7
+        for j in seq[1:]:
+            if not A[j] <= B[j]:
+                return False
+
+        # Equation 8 => only for pickup nodes
+        # time taken for start to j should be less than arrival of j and begging of j
+        for i in seq:
+            if i < 0:
+                continue
+            # assume we departure from D at 0th
+            t = 0 + self.travel_time(self.start_depot, i) 
+            if not (t <= A[i] <= B[i]):
+                return False
+
+        # Equation 9 => only for dropoff
+        for i in seq:
+            if i > 0:
+                continue
+            if not self.travel_time(i, self.end_depot) <= self.l(self.end_depot):
+                return False
+
+        # Equation 10
+        for i in seq:
+            if not (self.e(i) <= B[i] <= self.l(i)):
+                return False
+        return True
 
     def check_load_feasiblity(self, seq: List[int]):
         # CHECKS constraints 5, 6
@@ -173,21 +219,25 @@ class GTS:
         seq1 = [i, -i, j, -j]
         seq2 = [i, j, -i, -j]
         seq3 = [i, j, -j, -i]
-        if self.check_load_feasiblity(seq1):
+
+        def check_constraints(seq: List[int]):
+            return self.check_load_feasiblity(seq) and self.check_time_feasibility(seq)
+
+        if check_constraints(seq1):
             D_pi1 = for_sequence(*seq1) + wait_time_at_j 
             k_pi1 = 1
         else:
             D_pi1 = float("inf")
             k_pi1 = 0
 
-        if self.check_load_feasiblity(seq2):
+        if check_constraints(seq2):
             D_pi2 = for_sequence(*seq2) + wait_time_at_j
             k_pi2 = 1
         else:
             D_pi2 = float("inf")
             k_pi2 = 0
 
-        if self.check_load_feasiblity(seq3):
+        if check_constraints(seq3):
             D_pi3 = for_sequence(*seq3) + wait_time_at_j
             k_pi3 = 0
         else:
