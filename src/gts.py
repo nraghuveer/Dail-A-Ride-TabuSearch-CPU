@@ -167,7 +167,7 @@ class GTS:
 
         # Equation 9 => only for dropoff
         for i in seq:
-            if i > 0:
+            if i >= 0:
                 continue
             if not self.travel_time(i, self.end_depot) <= self.l(self.end_depot):
                 return False
@@ -176,6 +176,16 @@ class GTS:
         for i in seq:
             if not (self.e(i) <= B[i] <= self.l(i)):
                 return False
+
+        #Equation 11
+        for i in seq:
+            if i >= 0:
+                continue
+            # begging of service at droff - departure from pickup should be <= max ride time
+            if not B[i] - D[-i] <= self.T_ride:
+                return False
+
+        # TODO: Equation 12 => seems like we cannot apply this here
         return True
 
     def check_load_feasiblity(self, seq: List[int]):
