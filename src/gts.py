@@ -1,4 +1,5 @@
 import argparse
+from time import time
 from typing import List, Dict, Tuple
 from itertools import product
 from parse_requests import Request, getRequests
@@ -40,8 +41,8 @@ class GTS:
         print(f"number of requests => {self.n}")
         print(f"number of vehicles => {self.m}")
         print(f"Capacity of each vechicle => {self.Q}")
-        print(f"area of service => {self.area_of_service}")
-        print(f"service duration => {self.service_duration}")
+        print(f"area of service => {self.area_of_service} sq-kms")
+        print(f"service duration => {self.service_duration} hrs")
         
     def __init__(self, noof_customers: int, service_duration: int, area_of_service: int,
                  noof_vehicles: int) -> None:
@@ -120,8 +121,10 @@ class GTS:
         return self.tw[x][1]
 
     def start(self):
+        start = time()
         routes = run_assignment_problem(self)
         print("*"*30)
+        self.print_config()
         print(len(routes))
         for r in routes:
             if r and self.isV(r[0]):
@@ -130,6 +133,7 @@ class GTS:
                 print(f"Sub tour => {r}")
 
         visualize_graph(self, routes)
+        print(f"Total time = {time() - start} seconds")
 
     def print_adt(self):
         # calculate _D_ij for all node combinations
