@@ -8,6 +8,8 @@ from collections import defaultdict
 from scipy.optimize import linear_sum_assignment
 from pyvis.network import Network
 import numpy as np
+import matplotlib.pyplot as plt
+import randomcolor as rcolor
 
 def add_fixed_node(net, n, x, gts, group):
     if x < n:
@@ -19,6 +21,28 @@ def add_fixed_node(net, n, x, gts, group):
     xp, yp = p
     net.add_node(str(x), label=label, size=20, x=xp*200,
                  y=yp*200, physics=False, group=group)
+
+def visualize_3d(gts, routes):
+    fig = plt.figure()
+    ax = fig.add_subplot(projection='3d')
+    rc = rcolor.RandomColor()
+    for r in routes:
+        color = rc.generate()
+        for x in r:
+            try:
+                req = gts.requests[x]
+                u, v = req.src_point()
+                ax.scatter(u, v, req.pickup_time, color=color) # type: ignore
+            except Exception as e:
+                print(e)
+                continue
+    ax.set_xlabel("X Axis") # type: ignore
+    ax.set_ylabel("Y Axis") # type: ignore
+    ax.set_zlabel("Pickup Time") # type: ignore
+    
+    plt.title("Initial Clustering")
+    plt.show()
+
 
 def visualize_graph(gts, routes):
     n = gts.n
@@ -32,7 +56,7 @@ def visualize_graph(gts, routes):
             if v not in added:
                 add_fixed_node(net, n, v, gts, group=g)
                 added.add(v)
-            net.add_edge(str(u), str(v))
+            # net.add_edge(str(u), str(v))
     net.show("net.html")
 
 def build_paths(n, m, rows, cols):
@@ -81,16 +105,18 @@ def build_graph(gts):
                 graph[i][j] = gts.adt(i, j)
             elif gts.isV(i) and gts.isV(j):  # both are vehicles
                 continue  # inf will be value
+            # time for vehicle to start from depot to end of service at i
+            # no breaks in between
             elif gts.isV(i) and gts.isR(j):
-                # V * R
-                t_0j = gts.travel_time(0, j)
-                wait_time = max(gts.e(j) - gts.e(0) - t_0j, 0)
-                graph[i][j] = gts.e(0) + wait_time + t_0j + gts.d[j]
+                t_0j = gts.travel_time(gts.start_depot, j)
+                wait_time = max(gts.e(j) - gts.e(gts.start_depot) - t_0j, 0)
+                graph[i][j] = gts.e(gts.start_depot) + wait_time + t_0j + gts.d[j]
+            # time for vehicle to reach end depot from dparture of this node
             elif gts.isR(i) and gts.isV(j):
                 # R * V
                 # end of time window at depot? is total ride time?
-                t = gts.travel_time(-i, 0)
-                graph[i][j] = gts.service_duration - gts.e(-i) - t - gts.d[-i]
+                t = gts.travel_time(-i, gts.end_depot)
+                graph[i][j] = gts.l(gts.end_depot) - gts.e(-i) - t - gts.d[-i]
     return graph
 
 def run_assignment_problem(gts):

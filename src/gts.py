@@ -4,7 +4,7 @@ from time import time
 from typing import List, Dict, Tuple
 from itertools import product
 from parse_requests import Request, getRequests
-from assignment_problem import run_assignment_problem, visualize_graph
+from assignment_problem import run_assignment_problem, visualize_graph, visualize_3d
 
 Point = Tuple[int, int]
 
@@ -133,6 +133,7 @@ class GTS:
             else:
                 print(f"{i} Sub tour => {r}")
 
+        # visualize_3d(gts, routes)
         visualize_graph(self, routes)
         print(f"Total time = {time() - start} seconds")
 
