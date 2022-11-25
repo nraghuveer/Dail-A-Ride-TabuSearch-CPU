@@ -1,4 +1,5 @@
 import argparse
+from pprint import pprint
 from time import time
 from typing import List, Dict, Tuple
 from itertools import product
@@ -125,12 +126,12 @@ class GTS:
         routes = run_assignment_problem(self)
         print("*"*30)
         self.print_config()
-        print(len(routes))
-        for r in routes:
+        print("*"*30)
+        for i, r in enumerate(routes):
             if r and self.isV(r[0]):
-                print(f"Main path => {r}")
+                print(f"{i} - Main path => {r}")
             else:
-                print(f"Sub tour => {r}")
+                print(f"{i} Sub tour => {r}")
 
         visualize_graph(self, routes)
         print(f"Total time = {time() - start} seconds")
@@ -169,7 +170,13 @@ class GTS:
             A[j] = D[i] + self.travel_time(i, j)
             B[j] = A[j] + self.w[j]
             D[j] = B[j] + self.d[j]
-
+        
+        # print(seq)
+        # pprint(A)
+        # pprint(B)
+        # pprint(D)
+        # print("\n\n")
+        #
         # Equation 7
         for j in seq[1:]:
             if not A[j] <= B[j]:
@@ -301,8 +308,9 @@ if __name__ == "__main__":
     parser.add_argument('-n', '--noof_customers', required=True, type=int, help='noof customers')
     parser.add_argument('-d', '--service_duration', type=int, help='service duration', required=True)
     parser.add_argument('-a', '--area_of_service', type=int, help='area of service', required=True)
+    parser.add_argument('-v', '--noof_vehicles', required=True, type=int, help='noof vehicles')
     args = parser.parse_args()
-    gts = GTS(args.noof_customers, args.service_duration, args.area_of_service, 2)
+    gts = GTS(args.noof_customers, args.service_duration, args.area_of_service, args.noof_vehicles)
     gts.start()
 
 
