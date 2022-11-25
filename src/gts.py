@@ -64,7 +64,7 @@ class GTS:
         self.m = self.noof_vehciles
         self.start_depot = 0
         self.end_depot = 2*self.n + 1
-        self.Q = 4  # capacity of each vechicle
+        self.Q = 3  # capacity of each vechicle
 
         # build coordinates
         # each request has both pickup and dropoff coordinates
@@ -127,12 +127,21 @@ class GTS:
         print("*"*30)
         self.print_config()
         print("*"*30)
+        def print_node(x):
+            if self.isV(x):
+                return x
+            p = self.requests[x]
+            px, py = p.src_point()
+            return f"(({px}, {py}), {self.e(x)} - {self.l(x)})"
+
         for i, r in enumerate(routes):
             if r and self.isV(r[0]):
-                print(f"{i} - Main path => {r}")
+                # print(f"{i} - Main path => {list(map(print_node, r))}")
+                print(f"{i} - MainPath => {r}")
             else:
-                print(f"{i} Sub tour => {r}")
-
+                # print(f"{i} Sub tour => {list(map(print_node, r))}")
+                print(f"{i} - SubTour => {r}")
+        print("*"*30)
         # visualize_3d(gts, routes)
         visualize_graph(self, routes)
         print(f"Total time = {time() - start} seconds")

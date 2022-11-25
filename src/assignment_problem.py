@@ -4,6 +4,7 @@ So we build a graph where each request is node and each vehicle is also a node
 Arc weights is adt' is defined by (20) in the paper
 (adt') is refered as `D bar ij`
 """
+
 from collections import defaultdict
 from scipy.optimize import linear_sum_assignment
 from pyvis.network import Network
@@ -14,10 +15,10 @@ import randomcolor as rcolor
 def add_fixed_node(net, n, x, gts, group):
     if x < n:
         p = gts.requests[x].src_point()
-        label = f"{p} | " + str(gts.requests[x].pickup_time)
+        label = f"{x} | {p} | " + str(gts.requests[x].pickup_time)
     else:
         p = gts.requests[0].src_point()
-        label = f"{p} | " + str(gts.requests[0].pickup_time)
+        label = f"{x} | {p} | " + str(gts.requests[0].pickup_time)
     xp, yp = p
     net.add_node(str(x), label=label, size=20, x=xp*200,
                  y=yp*200, physics=False, group=group)
@@ -56,7 +57,7 @@ def visualize_graph(gts, routes):
             if v not in added:
                 add_fixed_node(net, n, v, gts, group=g)
                 added.add(v)
-            # net.add_edge(str(u), str(v))
+            net.add_edge(str(u), str(v))
     net.show("net.html")
 
 def build_paths(n, m, rows, cols):
