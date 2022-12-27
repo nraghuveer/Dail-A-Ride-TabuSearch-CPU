@@ -132,7 +132,7 @@ class GTS:
     def l(self, x):
         return self.tw[x][1]
 
-    def start(self):
+    def generate_clusters(self):
         benchmarking = self.get_config()
         start = time()
         routes = run_assignment_problem(self)
@@ -161,6 +161,7 @@ class GTS:
         self.writeToBenchmarkFile(filename, benchmarking)
         # visualize_3d(gts, routes)
         visualize_graph(self, routes)
+        return routes
 
     def print_adt(self):
         # calculate _D_ij for all node combinations
@@ -335,6 +336,67 @@ class GTS:
     #                 cust.append(self.alpha_coefficient * val)
     #     return sum(cust)
 
+    def evaluate_route(self, route: List[int]) -> bool:
+        # Eight-step evaluation
+        # compute following for each node
+        """
+        Departure-prev ...Ride...Arrival..service..wait...Departure
+        """
+        def calc(D0):
+            A: Dict[int, int] = {}
+            w: Dict[int, int] = {}
+            B: Dict[int, int] = {}
+            D: Dict[int, int] = {route[0]: D0}
+            y: Dict[int, int] = {route[0]: 0}
+            for prev, i in zip(route, route[1:]):
+                A[i] = D[prev] + self.travel_time(prev, i)
+                # self.w is standard wait time in time units
+                # w is relative time
+                B[i] = A[i] + self.w[i]
+                D[i] = B[i] + self.d[i]
+                w[i] = B[i] - A[i]
+                y[i] = y[prev] + self.q[i]
+            return A, w, B, D, y
+
+        A, w, B, D, y = calc(self.e(route[0]))
+        for i in route:
+            if not B[i] <= self.l(i) and y[i] <= self.Q:
+                return False
+
+        # computer F0 => amount by which we can delay starting from the first node in the route
+        # concept is basically use the time that we HAD to wait as DELAY
+        # gather this pieces of time nodes from node after i in the route
+        T_Trip = D[route[-1]]
+        F0 = self.F_i(route, 0, w, B, T_Trip)
+        # delay the departure from the start node
+        D0 = self.e(route[0]) + min(F0, sum(w[p] for p in route[1:-1]))
+        A, w, B, D, y = calc(D0)
+        Ti_ride = {}
+        for i in route:
+            Ti_ride[i] = A[-abs(i)] - B[abs(i)]
+
+
+        return False
+
+    def F_i(self, route: List[int], i_idx: int, w: Dict[int, int], B: Dict[int, int], T_Trip: int): # forward slack time
+        # maximum amount of time by which the departure from node i can be delayed without
+        # vilating time windows and passenger ride time
+        # q is the last node in the route
+        # j must be everything before i
+        # i can be both pikcup and dropoff
+        # consider all j- before i on the route
+        res = float('inf')
+        before_i = set(route[:i_idx])
+        after_i = set(route[i_idx+1:])
+        for j_idx, j in enumerate(route[i_idx:], start=i_idx):
+            cur_res = 0
+            for p in route[i_idx+1:j_idx+1]: # dont include i, but include j
+                # FIXME: P_j should be ride of passenger if he dropsoff before i
+                P_j = 0
+                cur_res += w[p] + min(self.l(j) - B[j], T_Trip - P_j)
+            res = min(cur_res, res)
+        return res
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-n', '--noof_customers', required=True, type=int, help='noof customers')
@@ -344,7 +406,8 @@ if __name__ == "__main__":
     parser.add_argument('-Q', '--vehicle_capacity', required=True, type=int, help='vehicle capacity')
     args = parser.parse_args()
     gts = GTS(args.noof_customers, args.service_duration, args.area_of_service, args.noof_vehicles, args.vehicle_capacity)
-    gts.start()
+    clusters = gts.generate_clusters()
+
 
 
 
