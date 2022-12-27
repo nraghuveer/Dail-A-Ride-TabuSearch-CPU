@@ -1,4 +1,6 @@
+import os
 import argparse
+import csv
 from pprint import pprint
 from time import time
 from typing import List, Dict, Tuple
@@ -32,7 +34,7 @@ c_ij < T_Gran
 """
 
 # STATIC DAR with time windows and a fleet of fixed size
-# Each request corresponds to a single passenger and 
+# Each request corresponds to a single passenger and
 # object function maximized firstly the number of customers served,
 # then the level of service provided on average
 
@@ -44,9 +46,18 @@ class GTS:
         print(f"Capacity of each vechicle => {self.Q}")
         print(f"area of service => {self.area_of_service} sq-kms")
         print(f"service duration => {self.service_duration} hrs")
-        
+
+    def get_config(self):
+        return {
+            "requests": self.n,
+            "vehicles": self.m,
+            "capacity": self.Q,
+            "areaOfService": self.area_of_service,
+            "serviceDuration": self.service_duration
+        }
+
     def __init__(self, noof_customers: int, service_duration: int, area_of_service: int,
-                 noof_vehicles: int) -> None:
+                 noof_vehicles: int, vechicleCapacity: int) -> None:
         self.service_duration = service_duration
         self.noof_customers = noof_customers
         self.area_of_service = area_of_service
@@ -64,7 +75,7 @@ class GTS:
         self.m = self.noof_vehciles
         self.start_depot = 0
         self.end_depot = 2*self.n + 1
-        self.Q = 3  # capacity of each vechicle
+        self.Q = vechicleCapacity  # capacity of each vechicle
 
         # build coordinates
         # each request has both pickup and dropoff coordinates
@@ -122,8 +133,10 @@ class GTS:
         return self.tw[x][1]
 
     def start(self):
+        benchmarking = self.get_config()
         start = time()
         routes = run_assignment_problem(self)
+        benchmarking["assignmentProblemTime"] = time() - start
         print("*"*30)
         self.print_config()
         print("*"*30)
@@ -142,9 +155,12 @@ class GTS:
                 # print(f"{i} Sub tour => {list(map(print_node, r))}")
                 print(f"{i} - SubTour => {r}")
         print("*"*30)
+        benchmarking['totalTime'] = time() - start
+        print(f"Total time = {benchmarking['totalTime']} seconds")
+        filename = os.environ.get("DARP_BENCHMARKFILE", "benchmark.csv")
+        self.writeToBenchmarkFile(filename, benchmarking)
         # visualize_3d(gts, routes)
         visualize_graph(self, routes)
-        print(f"Total time = {time() - start} seconds")
 
     def print_adt(self):
         # calculate _D_ij for all node combinations
@@ -180,7 +196,7 @@ class GTS:
             A[j] = D[i] + self.travel_time(i, j)
             B[j] = A[j] + self.w[j]
             D[j] = B[j] + self.d[j]
-        
+
         # print(seq)
         # pprint(A)
         # pprint(B)
@@ -198,7 +214,7 @@ class GTS:
             if i < 0:
                 continue
             # assume we departure from D at 0th
-            t = 0 + self.travel_time(self.start_depot, i) 
+            t = 0 + self.travel_time(self.start_depot, i)
             if not (t <= A[i] <= B[i]):
                 return False
 
@@ -246,7 +262,7 @@ class GTS:
 
     def isR(self, x):
         return not self.isV(x)  # returns true if the node is request
-              
+
     def adt(self, i: int, j: int):
         """ returns D~_ij """
         """ This is used measure spatial and temoral distance between two requests i and j"""
@@ -277,7 +293,7 @@ class GTS:
             return self.check_load_feasiblity(seq) and self.check_time_feasibility(seq)
 
         if check_constraints(seq1):
-            D_pi1 = for_sequence(*seq1) + wait_time_at_j 
+            D_pi1 = for_sequence(*seq1) + wait_time_at_j
         else:
             D_pi1 = float("inf")
 
@@ -292,6 +308,12 @@ class GTS:
             D_pi3 = float("inf")
 
         return sum(D for D in [D_pi1, D_pi2, D_pi3] if D != float('inf'))
+
+    def writeToBenchmarkFile(self, filename, benchmark):
+        print(f"Writing benchmarks to ", filename)
+        with open(filename, 'a') as f:
+            w = csv.DictWriter(f, fieldnames=list(benchmark.keys()))
+            w.writerow(benchmark)
 
     # def get_service_quality(self, i_arr, i_dep):
     #     # end of time window at destination
@@ -319,8 +341,9 @@ if __name__ == "__main__":
     parser.add_argument('-d', '--service_duration', type=int, help='service duration', required=True)
     parser.add_argument('-a', '--area_of_service', type=int, help='area of service', required=True)
     parser.add_argument('-v', '--noof_vehicles', required=True, type=int, help='noof vehicles')
+    parser.add_argument('-Q', '--vehicle_capacity', required=True, type=int, help='vehicle capacity')
     args = parser.parse_args()
-    gts = GTS(args.noof_customers, args.service_duration, args.area_of_service, args.noof_vehicles)
+    gts = GTS(args.noof_customers, args.service_duration, args.area_of_service, args.noof_vehicles, args.vehicle_capacity)
     gts.start()
 
 

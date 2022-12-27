@@ -1,0 +1,10 @@
+what does gpu paper talk about ASSIGNMENT problemwhat does gpu paper talk about ASSIGNMENT problemwhat does gpu paper talk about ASSIGNMENT problemwhat does gpu paper talk about ASSIGNMENT problemwhat does gpu paper talk about ASSIGNMENT problemwhat does gpu paper talk about ASSIGNMENT problemwhat does gpu paper talk about ASSIGNMENT problemwhat does gpu paper talk about ASSIGNMENT problemwhat does gpu paper talk about ASSIGNMENT problemwhat does gpu paper talk about ASSIGNMENT problemwhat does gpu paper talk about ASSIGNMENT problemwhat does gpu paper talk about ASSIGNMENT problem
+How much time was taken by the assignment problem
+
+Look at the reference bit more, to figure out what exactly they claim is paralleize
+
+Multiprocess
+CuOpt
+
+
+Parallel method for assignment problem

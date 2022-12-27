@@ -5,6 +5,7 @@ Arc weights is adt' is defined by (20) in the paper
 (adt') is refered as `D bar ij`
 """
 
+import time
 from collections import defaultdict
 from scipy.optimize import linear_sum_assignment
 from pyvis.network import Network
@@ -40,7 +41,7 @@ def visualize_3d(gts, routes):
     ax.set_xlabel("X Axis") # type: ignore
     ax.set_ylabel("Y Axis") # type: ignore
     ax.set_zlabel("Pickup Time") # type: ignore
-    
+
     plt.title("Initial Clustering")
     plt.show()
 
@@ -72,7 +73,7 @@ def build_paths(n, m, rows, cols):
                 visited.add(v)
                 dfs(v, visited, path)
         return
-        
+
     paths = []
     visited = set()
     for v in range(n, n+m):
@@ -89,7 +90,7 @@ def build_paths(n, m, rows, cols):
         dfs(u, visited, path)
         paths.append(path)
     return paths
-   
+
 def build_graph(gts):
     n, m = gts.n, gts.m
     N = n + m
