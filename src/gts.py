@@ -132,6 +132,11 @@ class GTS:
     def l(self, x):
         return self.tw[x][1]
 
+    def start(self):
+        clusters = self.generate_clusters()
+        routes = self.generate_solution(clusters)
+        print(routes)
+
     def generate_clusters(self):
         benchmarking = self.get_config()
         start = time()
@@ -316,25 +321,55 @@ class GTS:
             w = csv.DictWriter(f, fieldnames=list(benchmark.keys()))
             w.writerow(benchmark)
 
-    # def get_service_quality(self, i_arr, i_dep):
-    #     # end of time window at destination
-    #     a = self.time_windows[i_dep]
-    #     # start of service time at arrival
-    #     e, _ = self.service_time[i_arr]
-    #     t = self.trave_time[(i_arr, i_dep)]
-    #     return (a - e) / t
+    def get_service_quality(self, i):
+        # end of time window at destination
+        a = self.time_windows[-i]
+        # start of service time at arrival
+        e, _ = self.service_time[i]
+        t = self.trave_time[(i, -i)]
+        return (a - e) / t
 
+    def objective_function(self):
+        cust = []
+        N = self.arrivals[:]
+        N.extend(self.departures[:])
+        for i in self.arrivals:
+           for v in self.vehicles:
+               for j in N:
+                    val = self.get_x(i, j, v) - self.get_service_quality(i, j)
+                    cust.append(self.alpha_coefficient * val)
+        return sum(cust)
 
-    # def objective_function(self):
-    #     cust = []
-    #     N = self.arrivals[:]
-    #     N.extend(self.departures[:])
-    #     for i in self.arrivals:
-    #        for v in self.vehicles:
-    #            for j in N:
-    #                 val = self.get_x(i, j, v) - self.get_service_quality(i, j)
-    #                 cust.append(self.alpha_coefficient * val)
-    #     return sum(cust)
+    def insert_into_route(self, route: List[int], i: int):
+        """ inserts i into all possible positions of route """
+        for idx in range(len(route)):
+            # this is making a new copy of the existing route
+            # and returns the copy after insertion
+            new_route: List[int] = route[:]
+            new_route.insert(idx, i)
+            yield new_route
+
+    def generate_feasible_route(self, cluster):
+        # start with just depot in the route
+        route = [self.start_depot]
+        # take all the requests in the cluster except the start depot
+        requests = cluster[1:]
+        # iterate over the requests and try to insert each of them into the route
+        # does insertion order matters? TODO?
+        for r in requests:
+            for new_route in self.insert_into_route(route, r):
+                # FIXME: maybe we should choose the best of the all possible positions
+                if self.evaluate_route(new_route):
+                    route = new_route
+        return route
+
+    def generate_solution(self, clusters):
+        solution = []
+        for cluster in clusters:
+            if not self.isV(cluster[0]):
+                continue
+            solution.append(self.generate_feasible_route(cluster))
+        return solution
 
     def evaluate_route(self, route: List[int]) -> bool:
         # Eight-step evaluation
@@ -371,11 +406,9 @@ class GTS:
         # delay the departure from the start node
         D0 = self.e(route[0]) + min(F0, sum(w[p] for p in route[1:-1]))
         A, w, B, D, y = calc(D0)
-        Ti_ride = {}
-        for i in route:
-            Ti_ride[i] = A[-abs(i)] - B[abs(i)]
-
-
+        Ti_ride = {i: A[-abs(i)] - B[abs(i)] for i in route}
+        if all(Ti_ride[i] <= self.T_ride):
+            return True
         return False
 
     def F_i(self, route: List[int], i_idx: int, w: Dict[int, int], B: Dict[int, int], T_Trip: int): # forward slack time
