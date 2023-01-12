@@ -8,6 +8,8 @@ from typing import List, Dict, Tuple
 from itertools import product
 from parse_requests import Request, getRequests
 from assignment_problem import run_assignment_problem, visualize_graph, visualize_3d
+import concurrent.futures
+from multiprocessing import *
 
 Point = Tuple[int, int]
 
@@ -141,7 +143,8 @@ class GTS:
         start = time()
         routes, unserved = self.generate_routes_from_clusters(clusters)
         print("############ ROUTES ###############")
-        print(pprint(routes))
+        for route in routes:
+            print(route)
         print("############ UNSERVED ###############")
         print(print(unserved))
         benchmarking['routes_from_clusters'] = time() - start
@@ -338,8 +341,9 @@ class GTS:
     #     # start of service time at arrival
     #     t = self.travel_time(i, -i)
     #     return (a - e) / t
-
-    # def objective_function(self):
+    #
+    # # this is from the effective and fast heuristic paper not granual tabu
+    # def objective_function(self, route, A, B, D):
     #     cust = []
     #     N = self.arrivals[:]
     #     N.extend(self.departures[:])
@@ -348,11 +352,14 @@ class GTS:
     #            for j in N:
     #                 val = self.get_x(i, j, v) - self.get_service_quality(i)
     #                 cust.append(self.alpha_coefficient * val)
+    #
+    #
     #     return sum(cust)
 
     # will be applied on whole solution
     # not just on a route
-    def objective_function(self, B, D):
+
+    def objective_function(self, route, A, B, D, y):
         # EQ:1 in the paper
         w1 = 8
         w2 = 3
@@ -361,17 +368,22 @@ class GTS:
         w5 = 1
         alpha = 10000
 
-        def c():
-            return sum(self.travel_time(i, j) for j in self.requests for i in self.requests if i != j)
+        def c(): # routing costs
+            total = 0
+            for prev, cur in zip(route, route[1:]):
+                total += self.travel_time(prev, cur)
+            return total
 
-        def r():
-            return 0
+        def r(): # excess ride time
+            pickups = [x for x in route if x > 0]
+            return sum(B[-i] - D[i] - self.travel_time(i, -i) for i in pickups)
 
-        def l():
-            return 0
+        def l():  # wait time of passengers on board
+            nodes = [x for x in route if x not in [self.start_depot, self.end_depot]]
+            return sum(self.w[i]*(y[i] - self.q[i]) for i in nodes)
 
-        def g():
-            return 0
+        def g(): # route durations
+            return
 
         def e():
             return 0
@@ -410,12 +422,10 @@ class GTS:
         unserved = []
         # start from the first pickup node and check for local feasiblilty: tw of delivery node under consideration
         for req in requests[1:-1]:
-            cheap_route = (float('inf'), None)
             for new_route in self.possible_routes_with_changing_dropoffs(route[:], req):
                 if self.evaluate_route(new_route):
-                    if cheap_route[0] < 0:
-                        cheap_route = (0, new_route)
-            if cheap_route[1] == None:
+                    break
+            else:
                 # set as unserved
                 route.remove(req)
                 route.remove(-req)
@@ -426,14 +436,20 @@ class GTS:
     def generate_routes_from_clusters(self, clusters):
         routes = []
         unserved = []
-        for cluster in clusters:
-            if not self.isV(cluster[0]):
-                unserved.extend(cluster)
-                continue
-            route, unserved_ = self.generate_route_from_cluster(cluster)
-            if unserved_:
+        with concurrent.futures.ProcessPoolExecutor() as executor:
+            for _, result in zip(clusters, executor.map(self.generate_route_from_cluster, clusters)):
+                route, unserved_ = result
+                routes.append(route)
                 unserved.extend(unserved_)
-            routes.append(route)
+        #
+        # for cluster in clusters:
+        #     if not self.isV(cluster[0]):
+        #         unserved.extend(cluster)
+        #         continue
+        #     route, unserved_ = self.generate_route_from_cluster(cluster)
+        #     if unserved_:
+        #         unserved.extend(unserved_)
+        #     routes.append(route)
         return routes, unserved
 
     def evaluate_route(self, route: List[int]) -> bool:

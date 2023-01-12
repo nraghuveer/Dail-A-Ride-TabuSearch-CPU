@@ -6,6 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="129a78cc-4da5-4131-bb48-5997c0e89c4a" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/gts.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/gts.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -86,7 +87,7 @@
       <option name="presentableId" value="Default" />
       <updated>1673484967958</updated>
       <workItem from="1673484970817" duration="590000" />
-      <workItem from="1673487223384" duration="14713000" />
+      <workItem from="1673487223384" duration="18866000" />
     </task>
     <servers />
   </component>
