@@ -1,4 +1,5 @@
 import os
+from functools import reduce
 import argparse
 import csv
 from pprint import pprint
@@ -33,6 +34,7 @@ A granular neighborhood, the only moves allowed are those with reduced cost
 c_ij < T_Gran
 """
 
+
 # STATIC DAR with time windows and a fleet of fixed size
 # Each request corresponds to a single passenger and
 # object function maximized firstly the number of customers served,
@@ -63,10 +65,10 @@ class GTS:
         self.area_of_service = area_of_service
         self.noof_vehciles = noof_vehicles
         self.V = [f"v{v}" for v in range(self.noof_vehciles)]
-        self.T_route = self.service_duration
+        self.T_route = int(self.service_duration * 60 * 60 * 0.50)  # convert hrs to seconds
         # max ride of each passenger
         # IDEA: maybe we can do like alpha times * time from pickup to dropoff
-        self.T_ride = int(0.75 * self.service_duration)
+        self.T_ride = 0.40 * self.T_route
         self.requests: List[Request] = getRequests(self.noof_customers, self.service_duration, self.area_of_service)
         # there are total of n requests, so n nodes
         # 1....n
@@ -74,7 +76,7 @@ class GTS:
         self.n = len(self.requests)
         self.m = self.noof_vehciles
         self.start_depot = 0
-        self.end_depot = 2*self.n + 1
+        self.end_depot = 2 * self.n + 1
         self.Q = vechicleCapacity  # capacity of each vechicle
 
         # build coordinates
@@ -122,6 +124,7 @@ class GTS:
 
         """ wait times -> for now keep it 150 seconds, there is no wait times for drop nodes"""
         self.w = {}
+        self.w[self.start_depot] = self.w[self.end_depot] = 0
         for req in self.requests:
             self.w[req.id] = 0
             self.w[-req.id] = 150
@@ -134,17 +137,19 @@ class GTS:
 
     def start(self):
         clusters = self.generate_clusters()
-        routes = self.generate_solution(clusters)
+        routes, unserved = self.generate_routes_from_clusters(clusters)
         print(routes)
+        print(unserved)
 
     def generate_clusters(self):
         benchmarking = self.get_config()
         start = time()
         routes = run_assignment_problem(self)
         benchmarking["assignmentProblemTime"] = time() - start
-        print("*"*30)
+        print("*" * 30)
         self.print_config()
-        print("*"*30)
+        print("*" * 30)
+
         def print_node(x):
             if self.isV(x):
                 return x
@@ -159,7 +164,7 @@ class GTS:
             else:
                 # print(f"{i} Sub tour => {list(map(print_node, r))}")
                 print(f"{i} - SubTour => {r}")
-        print("*"*30)
+        print("*" * 30)
         benchmarking['totalTime'] = time() - start
         print(f"Total time = {benchmarking['totalTime']} seconds")
         filename = os.environ.get("DARP_BENCHMARKFILE", "benchmark.csv")
@@ -184,7 +189,7 @@ class GTS:
     def travel_time(self, one: int, two: int):
         pone = self.coords[one]
         ptwo = self.coords[two]
-        return abs(pone[0]-ptwo[0]) + abs(pone[1]-ptwo[1])
+        return abs(pone[0] - ptwo[0]) + abs(pone[1] - ptwo[1])
 
     def check_time_feasibility(self, seq: List[int]):
         # 7-10 => ensure correct arrival, service and departure time
@@ -195,7 +200,7 @@ class GTS:
         D = {}
         i = seq[0]
         A[i] = self.e(i)
-        B[i] = A[i] + self.w[i] # w[i] will be zero if the i is pickup
+        B[i] = A[i] + self.w[i]  # w[i] will be zero if the i is pickup
         D[i] = B[i] + self.d[i]
         for i, j in zip(seq, seq[1:]):
             # there might be some wait time if the node is pickup
@@ -236,7 +241,7 @@ class GTS:
             if not (self.e(i) <= B[i] <= self.l(i)):
                 return False
 
-        #Equation 11
+        # Equation 11
         for i in seq:
             if i >= 0:
                 continue
@@ -272,6 +277,7 @@ class GTS:
     def adt(self, i: int, j: int):
         """ returns D~_ij """
         """ This is used measure spatial and temoral distance between two requests i and j"""
+
         # Following are possible sequences
         # i+, i-, j+, j- => pi1
         # i+, j+, i-, j- => pi2
@@ -321,55 +327,110 @@ class GTS:
             w = csv.DictWriter(f, fieldnames=list(benchmark.keys()))
             w.writerow(benchmark)
 
-    def get_service_quality(self, i):
-        # end of time window at destination
-        a = self.time_windows[-i]
-        # start of service time at arrival
-        e, _ = self.service_time[i]
-        t = self.trave_time[(i, -i)]
-        return (a - e) / t
+    # def get_service_quality(self, i, j):
+    #     # end of time window at destination
+    #     a = self.e(i)
+    #     e = self.l(j)
+    #     # start of service time at arrival
+    #     t = self.travel_time(i, -i)
+    #     return (a - e) / t
 
-    def objective_function(self):
-        cust = []
-        N = self.arrivals[:]
-        N.extend(self.departures[:])
-        for i in self.arrivals:
-           for v in self.vehicles:
-               for j in N:
-                    val = self.get_x(i, j, v) - self.get_service_quality(i, j)
-                    cust.append(self.alpha_coefficient * val)
-        return sum(cust)
+    # def objective_function(self):
+    #     cust = []
+    #     N = self.arrivals[:]
+    #     N.extend(self.departures[:])
+    #     for i in self.arrivals:
+    #        for v in self.vehicles:
+    #            for j in N:
+    #                 val = self.get_x(i, j, v) - self.get_service_quality(i)
+    #                 cust.append(self.alpha_coefficient * val)
+    #     return sum(cust)
 
-    def insert_into_route(self, route: List[int], i: int):
-        """ inserts i into all possible positions of route """
-        for idx in range(len(route)):
-            # this is making a new copy of the existing route
-            # and returns the copy after insertion
-            new_route: List[int] = route[:]
-            new_route.insert(idx, i)
+    # will be applied on whole solution
+    # not just on a route
+    def objective_function(self, B, D):
+        # EQ:1 in the paper
+        w1 = 8
+        w2 = 3
+        w3 = 1
+        w4 = 1
+        w5 = 1
+        alpha = 10000
+
+        def c():
+            return sum(self.travel_time(i, j) for j in self.requests for i in self.requests if i != j)
+
+        def r():
+            return 0
+
+        def l():
+            return 0
+
+        def g():
+            return 0
+
+        def e():
+            return 0
+
+        def k():
+            return 0
+
+        return w1 * c() + w2 * r() + w3 * l() + w4 * g() + w5 * e() + alpha * k()
+
+    def possible_routes_with_changing_dropoffs(_, route, req) -> List[int]:
+        """Given a route, and a dropoff, yields all the possible routes where dropoff is changed to all positions
+        after its respective pickup"""
+        route.remove(-req)
+        pickup_idx = route.index(req)
+
+        # consider all valid positions to insert this dropoff and change the route
+        for idx in range(pickup_idx+1, len(route)-1):
+            new_route = route[:]
+            new_route.insert(idx, -req)
             yield new_route
 
-    def generate_feasible_route(self, cluster):
-        # start with just depot in the route
-        route = [self.start_depot]
-        # take all the requests in the cluster except the start depot
-        requests = cluster[1:]
-        # iterate over the requests and try to insert each of them into the route
-        # does insertion order matters? TODO?
-        for r in requests:
-            for new_route in self.insert_into_route(route, r):
-                # FIXME: maybe we should choose the best of the all possible positions
-                if self.evaluate_route(new_route):
-                    route = new_route
-        return route
+    def generate_route_from_cluster(self, cluster):
+        # remove start, end deport and vehicles from the route
+        requests = [x for x in cluster if not self.isV(x) and x not in [self.start_depot, self.end_depot]]
 
-    def generate_solution(self, clusters):
-        solution = []
+        # start with just depot in the route
+        # TODO: we are using the same order from cluster, should we change it?
+
+        # the cluster is set of pickup points, generate a initial route
+        # with start,x,-x, y, -y.......end
+        def reduce_fn(res, cur):
+            res.extend(cur)
+            return res
+        route = [self.start_depot] + reduce(reduce_fn, [(x, -x) for x in requests], []) + [self.end_depot]
+        print(route)
+        unserved = []
+        # start from the first pickup node and check for local feasiblilty: tw of delivery node under consideration
+        for req in requests[1:-1]:
+            cheap_route = (float('inf'), None)
+            for new_route in self.possible_routes_with_changing_dropoffs(route[:], req):
+                if self.evaluate_route(new_route):
+                    if cheap_route[0] < 0:
+                        cheap_route = (0, new_route)
+            if cheap_route[1] == None:
+                # set as unserved
+                route.remove(req)
+                route.remove(-req)
+                unserved.append(req)
+
+        return route, unserved
+
+    def generate_routes_from_clusters(self, clusters):
+        routes = []
+        unserved = []
         for cluster in clusters:
             if not self.isV(cluster[0]):
+                unserved.extend(cluster)
                 continue
-            solution.append(self.generate_feasible_route(cluster))
-        return solution
+            route, unserved_ = self.generate_route_from_cluster(cluster)
+            if unserved_:
+                unserved.extend(unserved_)
+            routes.append(route)
+        return routes, unserved
 
     def evaluate_route(self, route: List[int]) -> bool:
         # Eight-step evaluation
@@ -378,18 +439,22 @@ class GTS:
         Departure-prev ...Ride...Arrival..service..wait...Departure
         """
         def calc(D0):
-            A: Dict[int, int] = {}
-            w: Dict[int, int] = {}
-            B: Dict[int, int] = {}
-            D: Dict[int, int] = {route[0]: D0}
-            y: Dict[int, int] = {route[0]: 0}
+            A: Dict[int, int] = {route[0]: D0}  # Arrival time
+            w: Dict[int, int] = {route[0]: 0}  # wait times
+            B: Dict[int, int] = {route[0]: D0}  # Beginning of service
+            D: Dict[int, int] = {route[0]: D0}  # Departure times
+            y: Dict[int, int] = {route[0]: 0}  # load at the time of leaving node x
             for prev, i in zip(route, route[1:]):
+                # Arrival at i = Departure from previous node + travel time
                 A[i] = D[prev] + self.travel_time(prev, i)
-                # self.w is standard wait time in time units
-                # w is relative time
-                B[i] = A[i] + self.w[i]
+                # Beging service after the wait-time....
+                # TODO: why do we have to wait here?
+                B[i] = A[i]  # + self.w[i]
+                # after the service -> departure
                 D[i] = B[i] + self.d[i]
                 w[i] = B[i] - A[i]
+                # load after leave i, since self.q can have negative values for the
+                # dropoff nodes, this statement covers all cases
                 y[i] = y[prev] + self.q[i]
             return A, w, B, D, y
 
@@ -402,33 +467,30 @@ class GTS:
         # concept is basically use the time that we HAD to wait as DELAY
         # gather this pieces of time nodes from node after i in the route
         T_Trip = D[route[-1]]
-        F0 = self.F_i(route, 0, w, B, T_Trip)
+        F0 = self.forward_slack_time(route, 0, w, B, T_Trip)
         # delay the departure from the start node
         D0 = self.e(route[0]) + min(F0, sum(w[p] for p in route[1:-1]))
         A, w, B, D, y = calc(D0)
-        Ti_ride = {i: A[-abs(i)] - B[abs(i)] for i in route}
-        if all(Ti_ride[i] <= self.T_ride):
+        Ti_ride = {i: A[-abs(i)] - B[abs(i)] for i in route[1:-1]}
+        if all(Ti_ride[i] <= self.T_ride for i in route[1:-1]):
             return True
         return False
 
-    def F_i(self, route: List[int], i_idx: int, w: Dict[int, int], B: Dict[int, int], T_Trip: int): # forward slack time
-        # maximum amount of time by which the departure from node i can be delayed without
-        # vilating time windows and passenger ride time
-        # q is the last node in the route
-        # j must be everything before i
-        # i can be both pikcup and dropoff
-        # consider all j- before i on the route
+    def forward_slack_time(self, route: List[int], i: int, w: Dict[int, int], B: Dict[int, int], T_Trip: int):
+        # so this is basically cummulative waiting times and the difference between end of time window and start of
+        # it is min of all slacks at node j
+        # reference: https://logistik.bwl.uni-mainz.de/files/2018/12/LM-2015-01-revised.pdf
+        q = route[-1]
         res = float('inf')
-        before_i = set(route[:i_idx])
-        after_i = set(route[i_idx+1:])
-        for j_idx, j in enumerate(route[i_idx:], start=i_idx):
-            cur_res = 0
-            for p in route[i_idx+1:j_idx+1]: # dont include i, but include j
-                # FIXME: P_j should be ride of passenger if he dropsoff before i
-                P_j = 0
-                cur_res += w[p] + min(self.l(j) - B[j], T_Trip - P_j)
-            res = min(cur_res, res)
+        i_idx = route.index(i)
+        for j_idx in range(i_idx, len(route)):
+            # j is some point between and i and q
+            # calculate all the waittimes between i and j
+            wait_times = [w[route[x]] for x in range(i_idx, j_idx + 1)]
+            tw_slack = self.l(route[j_idx]) - B[route[j_idx]]
+            res = min(res, sum(wait_times) + tw_slack)
         return res
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -438,14 +500,7 @@ if __name__ == "__main__":
     parser.add_argument('-v', '--noof_vehicles', required=True, type=int, help='noof vehicles')
     parser.add_argument('-Q', '--vehicle_capacity', required=True, type=int, help='vehicle capacity')
     args = parser.parse_args()
-    gts = GTS(args.noof_customers, args.service_duration, args.area_of_service, args.noof_vehicles, args.vehicle_capacity)
-    clusters = gts.generate_clusters()
-
-
-
-
-
-
-
-
-
+    gts = GTS(args.noof_customers, args.service_duration, args.area_of_service, args.noof_vehicles,
+              args.vehicle_capacity)
+    # gts.generate_clusters()
+    gts.start()
