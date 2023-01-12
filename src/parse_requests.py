@@ -93,7 +93,7 @@ def sqKm_to_sqMiles(km: float) -> float:
 def getRequests(noof_customers, service_time_hrs, area_of_service_kms):
     service_time = service_time_hrs * 60 # minutes
     area_of_service = sqKm_to_sqMiles(area_of_service_kms) # square km
-    filepath = f"../DARPDATASET/Temportal-DS/nCustomers_{noof_customers}/Temporal_SD{service_time_hrs}hrs_SA{area_of_service_kms}km.txt"
+    filepath = f"DARPDATASET/Temportal-DS/nCustomers_{noof_customers}/Temporal_SD{service_time_hrs}hrs_SA{area_of_service_kms}km.txt"
     requests = []
     with open(filepath, 'r') as f:
         # first line is the depot

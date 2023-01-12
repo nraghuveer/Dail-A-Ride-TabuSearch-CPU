@@ -135,14 +135,22 @@ class GTS:
     def l(self, x):
         return self.tw[x][1]
 
-    def start(self):
-        clusters = self.generate_clusters()
+    def start(self, benchmarking):
+        program_start = time()
+        clusters = self.generate_clusters(benchmarking)
+        start = time()
         routes, unserved = self.generate_routes_from_clusters(clusters)
-        print(routes)
-        print(unserved)
+        print("############ ROUTES ###############")
+        print(pprint(routes))
+        print("############ UNSERVED ###############")
+        print(print(unserved))
+        benchmarking['routes_from_clusters'] = time() - start
+        benchmarking['total_time'] = time() - program_start
+        filename = os.environ.get("DARP_BENCHMARKFILE", "benchmark.csv")
+        self.writeToBenchmarkFile(filename, benchmarking)
+        print(pprint(benchmarking))
 
-    def generate_clusters(self):
-        benchmarking = self.get_config()
+    def generate_clusters(self, benchmarking):
         start = time()
         routes = run_assignment_problem(self)
         benchmarking["assignmentProblemTime"] = time() - start
@@ -165,10 +173,6 @@ class GTS:
                 # print(f"{i} Sub tour => {list(map(print_node, r))}")
                 print(f"{i} - SubTour => {r}")
         print("*" * 30)
-        benchmarking['totalTime'] = time() - start
-        print(f"Total time = {benchmarking['totalTime']} seconds")
-        filename = os.environ.get("DARP_BENCHMARKFILE", "benchmark.csv")
-        self.writeToBenchmarkFile(filename, benchmarking)
         # visualize_3d(gts, routes)
         visualize_graph(self, routes)
         return routes
@@ -463,17 +467,23 @@ class GTS:
             if not B[i] <= self.l(i) and y[i] <= self.Q:
                 return False
 
-        # computer F0 => amount by which we can delay starting from the first node in the route
-        # concept is basically use the time that we HAD to wait as DELAY
-        # gather this pieces of time nodes from node after i in the route
-        T_Trip = D[route[-1]]
-        F0 = self.forward_slack_time(route, 0, w, B, T_Trip)
-        # delay the departure from the start node
-        D0 = self.e(route[0]) + min(F0, sum(w[p] for p in route[1:-1]))
-        A, w, B, D, y = calc(D0)
-        Ti_ride = {i: A[-abs(i)] - B[abs(i)] for i in route[1:-1]}
-        if all(Ti_ride[i] <= self.T_ride for i in route[1:-1]):
-            return True
+        # make the moves
+        for j_idx, j in enumerate(route):
+            Fj = self.forward_slack_time(route, j, w, B, D[route[-1]])
+            w[j] = w[j] + min(Fj, sum(w[p] for p in route[j_idx+1:-1]))
+            B[j] = A[j] + w[j]
+            D[j] = B[j] + self.d[j]
+            for prev, i in zip(route[j_idx:], route[j_idx+1: ]):
+                # TODO: duplicate code
+                A[i] = D[prev] + self.travel_time(prev, i)
+                # Begin service after the wait-time....
+                B[i] = A[i]  # + self.w[i]
+                # after the service -> departure
+                D[i] = B[i] + self.d[i]
+                w[i] = B[i] - A[i]
+            Ti_ride = [A[-abs(i)] - B[abs(i)] for i in route[j_idx+1:-1]]
+            if all([ride <= self.T_ride for ride in Ti_ride]):
+                return True
         return False
 
     def forward_slack_time(self, route: List[int], i: int, w: Dict[int, int], B: Dict[int, int], T_Trip: int):
@@ -502,5 +512,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
     gts = GTS(args.noof_customers, args.service_duration, args.area_of_service, args.noof_vehicles,
               args.vehicle_capacity)
-    # gts.generate_clusters()
-    gts.start()
+    benchmarking = gts.get_config()
+    gts.start(benchmarking)
