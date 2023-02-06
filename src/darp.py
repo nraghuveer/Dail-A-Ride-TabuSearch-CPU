@@ -54,7 +54,6 @@ class DARP:
             self.coords[-req.id] = req.dst_point()
         self.coords[self.start_depot] = self.requests[0].src_point()
         self.coords[self.end_depot] = self.requests[0].src_point()
-        print(self.coords)
 
         # service time at each node -> in minutes
         # this is something we came up with

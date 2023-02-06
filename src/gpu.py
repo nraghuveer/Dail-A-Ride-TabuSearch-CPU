@@ -1,7 +1,7 @@
 import concurrent.futures
 from typing import List, Dict, Tuple
 
-MAX_GENERATION = 100
+MAX_GENERATION = 100000
 
 class ConstructionKernel:
     def __init__(self, gpu: 'GPU', seed, noof_requests, noof_vehicles):
@@ -32,11 +32,6 @@ class ConstructionKernel:
             print(routes[m])
         return routes, optimization_value
 
-
-def fn(args):
-    gpu, seed, n, m = args
-    k = ConstructionKernel(gpu, seed, n, m)
-    return k.generate()
 
 def optimization_fn(gpu: 'GPU', routes: Dict[int, List[int]]):
     """ Given a route, returns the value of the optimization function"""
@@ -111,10 +106,15 @@ class GPU:
         self.darp = darp
 
     def construction_kernel(self):
+        def map_fn(args):
+            gpu, seed, n, m = args
+            k = ConstructionKernel(gpu, seed, n, m)
+            return k.generate()
+
         with concurrent.futures.ProcessPoolExecutor() as executor:
             args = [(self, seed, self.darp.n, self.darp.m) for seed in range(MAX_GENERATION)]
             best_route = (float('inf'), None)
-            for ret in executor.map(fn, args):
+            for ret in executor.map(map_fn, args):
                 print(ret)
                 route, optimizationVal = ret
                 if optimizationVal < best_route[0]:
