@@ -1,7 +1,10 @@
 import concurrent.futures
 from typing import List, Dict, Tuple
+from collections import namedtuple
 
-MAX_GENERATION = 100000
+MAX_GENERATION = 100
+
+MoveParams = namedtuple('MoveParams', "i k1 k2 p1 p2")
 
 class ConstructionKernel:
     def __init__(self, gpu: 'GPU', seed, noof_requests, noof_vehicles):
@@ -31,6 +34,19 @@ class ConstructionKernel:
         for m in routes:
             print(routes[m])
         return routes, optimization_value
+
+def generation_kernel(routes: Dict[int, List[int]], params: MoveParams):
+    # from vehicle k1, remove the request i and insert into vehicle k2
+    # at p1 and p2
+    routes = {k: route[::] for k, route in routes.items()}
+    k1_route = routes.pop(params.k1)
+    k2_route = routes.pop(params.k2)
+    k1_route = [x for x in k1_route if abs(x) != params.i]
+    k2_route.insert(params.p1, params.i)
+    k2_route.insert(params.p2, -params.i)
+    routes[params.k1] = k1_route
+    routes[params.k2] = k2_route
+    return routes
 
 
 def optimization_fn(gpu: 'GPU', routes: Dict[int, List[int]]):
@@ -99,30 +115,62 @@ def optimization_fn(gpu: 'GPU', routes: Dict[int, List[int]]):
 
     # TODO: all the penality coefficients = 1
     return c + q + d + w
+def construction_map_fn(args):
+    gpu, seed, n, m = args
+    k = ConstructionKernel(gpu, seed, n, m)
+    return k.generate()
+
+def local_search_map_fn(args):
+    gpu, n, m, seed, routes = args
+    import random
+    random.seed(seed)
+    k1, k2 = random.sample(routes.keys(), 2)
+    if not routes[k1]:
+        return (float('inf'), {})
+    i = abs(random.choice(routes[k1]))
+    route_len = len(routes[k2])
+    p1 = random.choice(range(route_len + 1))
+    p2 = random.choice(range(p1+1, route_len+2))
+    params = MoveParams(i, k1, k2, p1, p2)
+    new_routes = generation_kernel(routes, params)
+    return optimization_fn(gpu, new_routes), new_routes
 
 
 class GPU:
-    def __init__(self, darp):
+    def __init__(self, darp, local_search_iterations: int, local_search_size: int):
         self.darp = darp
+        self.local_search_iterations = local_search_iterations
+        self.local_search_size = local_search_size
 
     def construction_kernel(self):
-        def map_fn(args):
-            gpu, seed, n, m = args
-            k = ConstructionKernel(gpu, seed, n, m)
-            return k.generate()
-
         with concurrent.futures.ProcessPoolExecutor() as executor:
             args = [(self, seed, self.darp.n, self.darp.m) for seed in range(MAX_GENERATION)]
             best_route = (float('inf'), None)
-            for ret in executor.map(map_fn, args):
-                print(ret)
+            for ret in executor.map(construction_map_fn, args):
                 route, optimizationVal = ret
                 if optimizationVal < best_route[0]:
                     best_route = (optimizationVal, route)
+            return best_route
 
-            print("best route")
-            print(best_route[1])
-            print(best_route[0])
+    def local_search_kernel(self, init_solution: Tuple[float, Dict[int, List[int]]]):
+        # do iterations
+        # generate unique move params -> NSIZE
+        solution_route = init_solution
+        cur_route = init_solution
+        N_SIZE = self.local_search_size
+        i = self.local_search_iterations # evaluate for 100 iterations => stop criterion for tabu search
+        while i:
+            print(f"### Local Search Iteration - {i-self.local_search_iterations} - best={solution_route[0]} #####")
+            with concurrent.futures.ProcessPoolExecutor() as executor:
+                args = [(self, self.darp.n, self.darp.m, seed, cur_route[1]) for seed in range(N_SIZE)]
+                best_route: Tuple[float, Dict[int, List[int]]] = (float('inf'), {})
+                for ret in executor.map(local_search_map_fn, args):
+                    optimizationVal, new_route = ret
+                    if optimizationVal < best_route[0]:
+                        best_route = ret
 
-
-
+                cur_route = best_route
+                if best_route[0] < solution_route[0]:
+                    solution_route = best_route
+            i -= 1
+        return solution_route
