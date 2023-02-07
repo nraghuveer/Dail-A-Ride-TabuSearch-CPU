@@ -1,10 +1,9 @@
 import concurrent.futures
-from typing import List, Dict, Tuple
-from collections import namedtuple
+from typing import List, Dict, Tuple, Set
+from tabu_memory_cache import MoveParams, TabuMemoryCache
+import random
 
 MAX_GENERATION = 100
-
-MoveParams = namedtuple('MoveParams', "i k1 k2 p1 p2")
 
 class ConstructionKernel:
     def __init__(self, gpu: 'GPU', seed, noof_requests, noof_vehicles):
@@ -121,26 +120,13 @@ def construction_map_fn(args):
     return k.generate()
 
 def local_search_map_fn(args):
-    gpu, n, m, seed, routes = args
-    import random
-    random.seed(seed)
-    k1, k2 = random.sample(routes.keys(), 2)
-    if not routes[k1]:
-        return (float('inf'), {})
-    i = abs(random.choice(routes[k1]))
-    route_len = len(routes[k2])
-    p1 = random.choice(range(route_len + 1))
-    p2 = random.choice(range(p1+1, route_len+2))
-    params = MoveParams(i, k1, k2, p1, p2)
-    new_routes = generation_kernel(routes, params)
+    gpu, move_params, routes = args
+    new_routes = generation_kernel(routes, move_params)
     return optimization_fn(gpu, new_routes), new_routes
 
-
 class GPU:
-    def __init__(self, darp, local_search_iterations: int, local_search_size: int):
+    def __init__(self, darp):
         self.darp = darp
-        self.local_search_iterations = local_search_iterations
-        self.local_search_size = local_search_size
 
     def construction_kernel(self):
         with concurrent.futures.ProcessPoolExecutor() as executor:
@@ -152,17 +138,47 @@ class GPU:
                     best_route = (optimizationVal, route)
             return best_route
 
+    @staticmethod
+    def generate_random_move_params(size, routes, tabu_mem: TabuMemoryCache):
+        ret: Set[MoveParams] = set()
+        for seed in range(size):
+            # if the seed is same, it will endup in infinite loop
+            # by generati;ng same values......
+            random.seed(seed * random.randrange(size))
+            while True:
+                k1, k2 = random.sample(routes.keys(), 2)
+                if not routes[k1]:
+                    continue
+                i = abs(random.choice(routes[k1]))
+                route_len = len(routes[k2])
+                p1 = random.choice(range(route_len + 1))
+                p2 = random.choice(range(p1+1, route_len+2))
+                param = MoveParams(i, k1, k2, p1, p2)
+                if not tabu_mem.exists(param):
+                    tabu_mem.put(param)
+                    ret.add(param)
+                    break
+        return ret
+
     def local_search_kernel(self, init_solution: Tuple[float, Dict[int, List[int]]]):
         # do iterations
         # generate unique move params -> NSIZE
         solution_route = init_solution
         cur_route = init_solution
-        N_SIZE = self.local_search_size
-        i = self.local_search_iterations # evaluate for 100 iterations => stop criterion for tabu search
+        N_SIZE = int(self.darp.n * 0.75)
+        total_iterations = int(self.darp.n * 6.5)
+        i = total_iterations
+        tabu_memory = TabuMemoryCache(evictIterations=3)
+
         while i:
-            print(f"### Local Search Iteration - {i-self.local_search_iterations} - best={solution_route[0]} #####")
+            tabu_memory.inc_iteration()
+            print(f"### Local Search Iteration {i-total_iterations}/{total_iterations-1} - best={solution_route[0]} #####")
             with concurrent.futures.ProcessPoolExecutor() as executor:
-                args = [(self, self.darp.n, self.darp.m, seed, cur_route[1]) for seed in range(N_SIZE)]
+                # args = [(self, self.darp.n, self.darp.m, seed, cur_route[1])
+                # for seed in range(N_SIZE)]
+                args = GPU.generate_random_move_params(N_SIZE, cur_route[1], tabu_memory)
+                args = [(self, params, cur_route[1]) for params in args]
+
                 best_route: Tuple[float, Dict[int, List[int]]] = (float('inf'), {})
                 for ret in executor.map(local_search_map_fn, args):
                     optimizationVal, new_route = ret
