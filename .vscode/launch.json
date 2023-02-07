@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Current File",
+            "name": "500 requests",
             "type": "python",
             "request": "launch",
             "program": "${file}",
@@ -23,6 +23,26 @@
             ],
             "console": "integratedTerminal",
             "justMyCode": true
-        }
+        },
+    {
+        "name": "50 requests",
+        "type": "python",
+        "request": "launch",
+        "program": "${file}",
+        "args": [
+            "-n",
+            "50",
+            "-v",
+            "5",
+            "-d",
+            "4",
+            "-a",
+            "10",
+            "-Q",
+            "3"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+    }
     ]
 }
