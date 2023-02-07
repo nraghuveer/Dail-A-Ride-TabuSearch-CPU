@@ -30,9 +30,9 @@ class ConstructionKernel:
             routes[k].insert(p2, -i)
         optimization_value = optimization_fn(self.gpu, routes)
         # print(self.gpu.darp.n, str(self.gpu.darp.end_depot))
-        print("############ "+ f"{self.seed} - {optimization_value}" +" ################")
-        for m in routes:
-            print(routes[m])
+        # print("############ "+ f"{self.seed} - {optimization_value}" +" ################")
+        # for m in routes:
+        #     print(routes[m])
         return routes, optimization_value
 
 def generation_kernel(routes: Dict[int, List[int]], params: MoveParams):

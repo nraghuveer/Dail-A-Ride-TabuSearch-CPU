@@ -8,3 +8,16 @@ CuOpt
 
 
 Parallel method for assignment problem
+
+
+Reason -> related to major
+course => 999
+
+One Paragraph ->
+how to it related ->
+
+The work experience (Software Engineer) is very closely realted to the student's course/major Masters in Computer Science. The Algorithms, Advanced Algorithms and Advanced Object Oriented Programming courses that he completed as part of his are used as part of daily work in the role. The domain of the role is also closely related to his masters thesis topic which is Transportation Algorithms and would help him in getting deeper understanding for his further research.
+
+
+
+

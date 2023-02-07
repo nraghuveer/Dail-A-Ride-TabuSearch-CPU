@@ -309,10 +309,11 @@ if __name__ == "__main__":
     darp = DARP(args.noof_customers, args.service_duration, args.area_of_service, args.noof_vehicles,
               args.vehicle_capacity)
     benchmarking = darp.get_config()
-    gpu = GPU(darp, local_search_iterations=200, local_search_size=700)
+    gpu = GPU(darp, local_search_iterations=500, local_search_size=500)
     init_solution = gpu.construction_kernel()
     print(init_solution)
     solution = gpu.local_search_kernel(init_solution)
-    print(solution)
+    print(solution[1])
+    print(solution[0])
     print('done')
 

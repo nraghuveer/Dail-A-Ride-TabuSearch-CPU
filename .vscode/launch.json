@@ -11,15 +11,15 @@
             "program": "${file}",
             "args": [
                 "-n",
-                "50",
+                "500",
                 "-v",
-                "5",
+                "50",
                 "-d",
-                "4",
+                "8",
                 "-a",
                 "10",
                 "-Q",
-                "3"
+                "5"
             ],
             "console": "integratedTerminal",
             "justMyCode": true
