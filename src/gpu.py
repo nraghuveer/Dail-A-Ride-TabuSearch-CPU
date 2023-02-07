@@ -165,10 +165,12 @@ class GPU:
         # generate unique move params -> NSIZE
         solution_route = init_solution
         cur_route = init_solution
-        N_SIZE = int(self.darp.n * 0.75)
-        total_iterations = int(self.darp.n * 6.5)
+        N_SIZE = int(self.darp.n * 0.075)
+        total_iterations = int(self.darp.n * 10)
         i = total_iterations
-        tabu_memory = TabuMemoryCache(evictIterations=3)
+        tabu_memory = TabuMemoryCache(evictIterations=10)
+        last_change = -1
+        NO_CHANGE_THRESHOLD = int(total_iterations * 0.10)
 
         while i:
             tabu_memory.inc_iteration()
@@ -188,5 +190,9 @@ class GPU:
                 cur_route = best_route
                 if best_route[0] < solution_route[0]:
                     solution_route = best_route
+                    last_change = i
+                # if i - last_change > NO_CHANGE_THRESHOLD:
+                #     print(f"No Change in optimization Fn value since {NO_CHANGE_THRESHOLD} iterations, breaking the iteration")
+                #     break
             i -= 1
         return solution_route
