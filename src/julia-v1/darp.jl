@@ -46,7 +46,7 @@ end
 
 function parseData(noofCustomers, serviceTime, areaOfService)
     basepath = "/Users/raghuveernaraharisetti/mscs/dail-a-ride/Dail-A-Ride-TabuSearch-CPU"
-    filepath = "$(basepath)/DARPDATASET/Temporal-DS/nCustomers_$(noofCustomers)/Temporal_SD$(serviceTime)hrs_SA$(areaOfService)km.txt"
+    filepath = "$(basepath)/DARPDATASET/Temportal-DS/nCustomers_$(noofCustomers)/Temporal_SD$(serviceTime)hrs_SA$(areaOfService)km.txt"
     print(filepath)
     requests = Request[]
     filelines = readlines(filepath)
