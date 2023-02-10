@@ -92,8 +92,8 @@ class DARP:
         self.w = {}
         self.w[self.start_depot] = self.w[self.end_depot] = 0
         for req in self.requests:
-            self.w[req.id] = 0
-            self.w[-req.id] = 150
+            self.w[req.id] = 150
+            self.w[-req.id] = 0
 
     def e(self, x):
         return self.tw[x][0]

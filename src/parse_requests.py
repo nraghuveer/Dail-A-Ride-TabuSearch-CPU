@@ -88,7 +88,7 @@ class Request:
         return " | ".join([src, dst, drt, mrt, picktime, sd, aos])
 
 def sqKm_to_sqMiles(km: float) -> float:
-    return km * 0.386102
+    return km * 
 
 def getRequests(noof_customers, service_time_hrs, area_of_service_kms):
     service_time = service_time_hrs * 60 # minutes

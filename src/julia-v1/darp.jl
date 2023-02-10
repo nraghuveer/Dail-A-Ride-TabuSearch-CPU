@@ -1,68 +1,77 @@
-const IDX = 1
-const SRC_POINT_X = 2
-const SRC_POINT_Y = 3
-const DST_POINT_X = 4
-const DST_POINT_Y = 5
-const DRT = 6
-const MRT= 7
-const PICKUP_OR_DROPOFF_TIME = 8
-const ISPICK_TIME = 9
+include("parseRequests.jl")
 
-struct Point
-    x::Int32
-    y::Int32
-    Point(x, y) = new(x, y)
-end
+# TODO -> make these config driven?
+const DEFAULT_SERVICE_TIME = 2
+const DEFAULT_TW_OFFSET = 5 * 60 # 5 minutes in seconds
+const DEFAULT_WAITTIME_AT_PICKUP = 3 * 60 # 3 minutes in seconds
 
-struct Request
-    load::Int32 # number of passengers for this request
-    id::Int32
-    src::Point
-    dst::Point
-    direct_ride_time::Float32
-    max_ride_time::Float32
-    time::Float32
-    is_pickup::Bool
-end
+struct DARP
+    nR::Int32
+    sd::Float64 # in seconds
+    aos::Int32 # in sqmiles
+    nV::Int32
+    T_route::Float64 # lets say a route can run as long as service duration
+    requests::Array{Request}
+    start_depot::Int32
+    end_depot::Int32
+    Q::Int16 # vehicle capacity
+    coords::Dict{Int32, Point}
+    d::Dict{Int32, Int32}
+    q::Dict{Int32, Int32}
+    tw::Dict{Int32, Tuple{Float64, Float64}}
+    w::Dict{Int32, Float64}
+    function DARP(nR::Int32, sd::Int32, aos::Int32, nV::Int32, Q::Int16)
+        start_depot::Int32 = 0
+        end_depot::Int32 = 2*nR + 1
 
-function request_from_dataline(line::AbstractString)
-    parts = split(line, "\t")
-    parts = filter(part -> part != "", parts)
-    # the parts should ateleast of size 9
-    if length(parts) < 9
-        return nothing
-    end
+        sdInSeconds::Float64 = parse(Float64, sd*60*60)
+        T_route::Float64 = sdInSeconds
 
-    return Request(1,
-                    parse(Int32, parts[IDX]),
-                    Point(parse(Int32, parts[SRC_POINT_X]), parse(Int32, parts[SRC_POINT_Y])),
-                    Point(parse(Int32, parts[DST_POINT_X]), parse(Int32, parts[DST_POINT_Y])),
-                    parse(Float32, parts[DRT]),
-                    parse(Float32, parts[MRT]),
-                    parse(Float32, parts[PICKUP_OR_DROPOFF_TIME]),
-                    Bool(parse(Int8, parts[ISPICK_TIME]))
-                    )
-end
+        requests = parseData(nR, sd, aos)
+        coords::Dict{int, Point} = Dict{int, Point}([])
+        coords[start_depot] = requests[1].src
+        coords[end_depot] = requests[1].dst
 
-function parseData(noofCustomers, serviceTime, areaOfService)
-    basepath = "/Users/raghuveernaraharisetti/mscs/dail-a-ride/Dail-A-Ride-TabuSearch-CPU"
-    filepath = "$(basepath)/DARPDATASET/Temportal-DS/nCustomers_$(noofCustomers)/Temporal_SD$(serviceTime)hrs_SA$(areaOfService)km.txt"
-    print(filepath)
-    requests = Request[]
-    filelines = readlines(filepath)
+        d::Dict{Int32, Int32} = Dict{Int32, Int32}([])
+        d[start_depot] = 0
+        d[end_depot] = 0
 
-    for line in filelines
-        req = request_from_dataline(line)
-        if isnothing(req)
-            println("nothing")
-            continue
+        q::Dict{Int32, Int32} = Dict{Int32, Int32}([])
+        q[start_depot] = 0
+        q[end_depot] = 0
+
+        tw::Dict{Int32, Tuple{Float64, Float64}} = Dict([])
+        offset::Int32 = DEFAULT_TW_OFFSET
+        tw[start_depot] = (parse(0, Float64), parse(offset, Float64))
+        tw[end_depot] = (T_route, T_route+offset)
+
+        w::Dict{Int32, Float64} = Dict{Int32, Float64}([])
+        w[start_depot] = parse(Float64, 0)
+        w[end_depot] = parse(Float64, 0)
+
+        for req in requests[2:end]
+            coords[req.id] = req.src
+            coords[-req.id] = req.dst
+
+            # data doesnt have specific service time at each node, so u;se const value
+            d[req.id] = 2
+            d[-req.id] = 2
+
+            # change in load after each node
+            q[req.id] = req.load
+            q[-req.id] = -req.load
+
+            tw[req.id] = (req.pickup_time, req.pickup_time + offset)
+            tw[-req.id] = (req.dropoff_time, req.dropoff_time + offset)
+
+            w[req.id] = DEFAULT_WAITTIME_AT_PICKUP
+            w[-req.id] = 0
         end
-        push!(requests, req)
+        return new(nR, sdInSeconds, parse(Float64, aos*0.386102),
+                    nV, T_route, requests, start_depot, end_depot,
+                    Q, coords, d, q, tw, w)
     end
-
-    return requests
 end
-
 
 function main()
     println(parseData(50, 2, 10))
