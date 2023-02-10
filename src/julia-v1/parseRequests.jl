@@ -6,19 +6,19 @@ const SRC_POINT_Y = 3
 const DST_POINT_X = 4
 const DST_POINT_Y = 5
 const DRT = 6
-const MRT= 7
+const MRT = 7
 const PICKUP_OR_DROPOFF_TIME = 8
 const ISPICK_TIME = 9
 
 struct Point
-    x::Int32
-    y::Int32
+    x::Int64
+    y::Int64
     Point(x, y) = new(x, y)
 end
 
 struct Request
-    load::Int32 # number of passengers for this request
-    id::Int32
+    load::Int64 # number of passengers for this request
+    id::Int64
     src::Point
     dst::Point
     direct_ride_time::Float64
@@ -40,15 +40,15 @@ function request_from_dataline(line::AbstractString)
     drt = parse(Float64, parts[DRT])
     mrt = parse(Float64, parts[MRT])
     return Request(1,
-                    parse(Int32, parts[IDX]),
-                    Point(parse(Int32, parts[SRC_POINT_X]), parse(Int32, parts[SRC_POINT_Y])),
-                    Point(parse(Int32, parts[DST_POINT_X]), parse(Int32, parts[DST_POINT_Y])),
-                    drt,
-                    mrt,
-                    time,
-                    time + (DROPOFF_ALPHA * drt),
-                    Bool(parse(Int8, parts[ISPICK_TIME]))
-                    )
+        parse(Int64, parts[IDX]),
+        Point(parse(Int64, parts[SRC_POINT_X]), parse(Int64, parts[SRC_POINT_Y])),
+        Point(parse(Int64, parts[DST_POINT_X]), parse(Int64, parts[DST_POINT_Y])),
+        drt,
+        mrt,
+        time,
+        time + (DROPOFF_ALPHA * drt),
+        Bool(parse(Int8, parts[ISPICK_TIME]))
+    )
 end
 
 
