@@ -1,4 +1,5 @@
 include("parseRequests.jl")
+include("construction_kernel.jl")
 
 # TODO -> make these config driven?
 const DEFAULT_SERVICE_TIME = 2
@@ -25,6 +26,7 @@ struct DARP
         end_depot::Int64 = 2 * nR + 1
 
         sdInSeconds::Float64 = sd * 60 * 60
+        aosInSqMiles::Int64 = trunc(Int64, aos * 0.386102)
         T_route::Float64 = sdInSeconds
 
         requests = parseData(nR, sd, aos)
@@ -67,7 +69,7 @@ struct DARP
             w[req.id] = DEFAULT_WAITTIME_AT_PICKUP
             w[-req.id] = 0
         end
-        return new(nR, sdInSeconds, trunc(Int64, aos * 0.386102),
+        return new(nR, sdInSeconds, aosInSqMiles,
             nV, T_route, requests, start_depot, end_depot,
             Q, coords, d, q, tw, w)
     end
@@ -75,6 +77,7 @@ end
 
 function main()
     darp = DARP(50, 2, 10, 5, 1)
-    println(darp)
+    routes, _ = generate(10, darp.requests, darp.nR, darp.nV)
+    println(routes)
 end
 main()
