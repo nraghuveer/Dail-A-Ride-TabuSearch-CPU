@@ -1,5 +1,9 @@
 include("parseRequests.jl")
 include("construction_kernel.jl")
+using BenchmarkTools
+using Base.Threads
+
+const Route = Dict{Int64, Array{Int64}}
 
 # TODO -> make these config driven?
 const DEFAULT_SERVICE_TIME = 2
@@ -76,8 +80,16 @@ struct DARP
 end
 
 function main()
-    darp = DARP(50, 2, 10, 5, 1)
-    routes, _ = generate(10, darp.requests, darp.nR, darp.nV)
-    println(routes)
+    darp = DARP(500, 24, 10, 5, 1)
+    n = 1000 # number of tasks
+    routes = fill(Route(), n)
+    println("")
+    println(Threads.nthreads())
+    Threads.@threads for i in 1:n
+        cur = generate(10, darp.requests, darp.nR, darp.nV)
+        routes[i] = cur
+    end
+    println(length(routes))
 end
-main()
+
+@btime main()
