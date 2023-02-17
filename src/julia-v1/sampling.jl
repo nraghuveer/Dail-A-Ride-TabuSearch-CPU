@@ -1,9 +1,10 @@
 # helper functions for sampling - specific to this algorithm
+include("darp.jl")
 using StatsBase
 using Random
 
 function generate_initial_routes(nR::Int64, nV::Int64) Dict{Int64, Array{Int64}}
-    routes::Dict{Int64,Array{Int64}} = Dict{Int64, Array{Int64}}([])
+    routes::Route = Dict{Int64, Array{Int64}}([])
     # the idea is to generate a route for each vehcilce
     # and also assign a vechicle to each request
     # everything should be completely random
