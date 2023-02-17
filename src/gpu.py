@@ -114,6 +114,7 @@ def optimization_fn(gpu: 'GPU', routes: Dict[int, List[int]]):
 
     # TODO: all the penality coefficients = 1
     return c + q + d + w
+
 def construction_map_fn(args):
     gpu, seed, n, m = args
     k = ConstructionKernel(gpu, seed, n, m)

@@ -25,6 +25,11 @@ struct DARP
     q::Dict{Int64,Int64}
     tw::Dict{Int64,Tuple{Float64,Float64}}
     w::Dict{Int64,Float64}
+    function travel_time(one::Int64, two::Int64)
+        pone = coords[one]
+        ptwo = coords[two]
+        return abs(pone.x - ptwo.x) + abs(pone.y - ptwo.y)
+    end
     function DARP(nR::Int64, sd::Int64, aos::Int64, nV::Int64, Q::Int64)
         start_depot::Int64 = 0
         end_depot::Int64 = 2 * nR + 1
@@ -80,16 +85,14 @@ struct DARP
 end
 
 function main()
-    darp = DARP(500, 24, 10, 5, 1)
+    darp = DARP(50, 24, 10, 5, 1)
     n = 1000 # number of tasks
     routes = fill(Route(), n)
-    println("")
-    println(Threads.nthreads())
     Threads.@threads for i in 1:n
         cur = generate(10, darp.requests, darp.nR, darp.nV)
         routes[i] = cur
     end
-    println(length(routes))
+    println(routes[100])
 end
 
-@btime main()
+main()
