@@ -1,11 +1,11 @@
 # TODO -> make these config driven?
+include("parseRequests.jl")
+
 const DEFAULT_SERVICE_TIME = 2
 const DEFAULT_TW_OFFSET = 5 * 60 # 5 minutes in seconds
 const DEFAULT_WAITTIME_AT_PICKUP = 3 * 60 # 3 minutes in seconds
-
-include("parseRequests.jl")
-
 const Route = Dict{Int64, Array{Int64}}
+
 
 struct DARP
     nR::Int64
@@ -22,11 +22,7 @@ struct DARP
     q::Dict{Int64,Int64}
     tw::Dict{Int64,Tuple{Float64,Float64}}
     w::Dict{Int64,Float64}
-    function travel_time(one::Int64, two::Int64)
-        pone = coords[one]
-        ptwo = coords[two]
-        return abs(pone.x - ptwo.x) + abs(pone.y - ptwo.y)
-    end
+
     function DARP(nR::Int64, sd::Int64, aos::Int64, nV::Int64, Q::Int64)
         start_depot::Int64 = 0
         end_depot::Int64 = 2 * nR + 1
@@ -79,5 +75,12 @@ struct DARP
             nV, T_route, requests, start_depot, end_depot,
             Q, coords, d, q, tw, w)
     end
+end
+
+function travel_time(darp::DARP, one::Int64, two::Int64) Int64
+    pone = darp.coords[one]
+    ptwo = darp.coords[two]
+    ret =  abs(pone.x - ptwo.x) + abs(pone.y - ptwo.y)
+    return ret
 end
 

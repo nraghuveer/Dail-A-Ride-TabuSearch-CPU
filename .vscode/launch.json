@@ -5,6 +5,13 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "type": "julia",
+            "request": "launch",
+            "name": "Julia Main",
+            "program": "${workspaceFolder}/src/julia-v1/main.jl",
+            "stopOnEntry": false
+        },
+        {
             "name": "500 requests",
             "type": "python",
             "request": "launch",
@@ -24,25 +31,25 @@
             "console": "integratedTerminal",
             "justMyCode": true
         },
-    {
-        "name": "50 requests",
-        "type": "python",
-        "request": "launch",
-        "program": "${file}",
-        "args": [
-            "-n",
-            "50",
-            "-v",
-            "5",
-            "-d",
-            "4",
-            "-a",
-            "10",
-            "-Q",
-            "3"
-        ],
-        "console": "integratedTerminal",
-        "justMyCode": true
-    }
+        {
+            "name": "50 requests",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "args": [
+                "-n",
+                "50",
+                "-v",
+                "5",
+                "-d",
+                "4",
+                "-a",
+                "10",
+                "-Q",
+                "3"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        }
     ]
 }
