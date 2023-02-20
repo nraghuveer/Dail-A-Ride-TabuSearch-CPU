@@ -80,8 +80,6 @@ end
 function travel_time(darp::DARP, one::Int64, two::Int64)
     pone = darp.coords[one]
     ptwo = darp.coords[two]
-    # since manhattan distance doesnt ofen represent the travel time,
-    # multiple with some coefficient
     return (abs(pone.x - ptwo.x) + abs(pone.y - ptwo.y))
 end
 

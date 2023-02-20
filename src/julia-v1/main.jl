@@ -16,6 +16,9 @@ function main()
         scores[i] = calc_optimization_val(darp, cur)
         routes[i] = cur
     end
+    minOptFnVal, idx = findmin(scores)
+    println(routes[idx])
+    println(minOptFnVal)
 end
 
 main()

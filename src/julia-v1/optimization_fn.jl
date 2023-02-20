@@ -66,6 +66,6 @@ function calc_optimization_val(darp::DARP, raw_routes::Route)
     end
     # calc the total late for request in all the routes
     w = total_late(routes)
-    println("c = $c | q = $q | d = $d | w = $w")
+    # println("c = $c | q = $q | d = $d | w = $w")
     return c + q + d + w
 end
