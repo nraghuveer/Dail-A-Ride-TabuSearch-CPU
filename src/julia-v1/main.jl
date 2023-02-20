@@ -4,8 +4,10 @@ include("optimization_fn.jl")
 using BenchmarkTools
 using Base.Threads
 
+# TODO: Tighten bounds for each route
+
 function main()
-    darp = DARP(50, 24, 10, 5, 1)
+    darp = DARP(50, 2, 10, 5, 1)
     n = 1000 # number of tasks
     routes = fill(Route(), n)
     scores = fill(floatmin(Float64), n)
@@ -14,8 +16,6 @@ function main()
         scores[i] = calc_optimization_val(darp, cur)
         routes[i] = cur
     end
-    println(routes[100])
-    println(scores[105])
 end
 
 main()

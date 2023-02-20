@@ -27,12 +27,12 @@ function generate_initial_routes(nR::Int64, nV::Int64) Dict{Int64, Array{Int64}}
         k = k[1]
         l = length(routes[k])
         if l === 0
-            insert!(routes[k], 1, req)
+            p1 = 1
         else
             p1 = rand(1:l+1)
-            insert!(routes[k], p1, req)
         end
-        p2 = rand(1:l+2) # +2 because we just added one in above line
+        insert!(routes[k], p1, req)
+        p2 = rand(p1+1:l+2)
         insert!(routes[k], p2, -req)
     end
     return routes

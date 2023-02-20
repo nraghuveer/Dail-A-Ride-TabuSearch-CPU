@@ -1,12 +1,7 @@
 include("darp.jl")
 include("parseRequests.jl")
 
-const RVAL = Dict{Int,Int}
-
-function max_of_arr(A::Vector{Int64})
-    Int64
-    return reduce((x, y) -> min.(x, y), A)
-end
+const RVAL = Dict{Int64, Float64}
 
 # excepts each routes start and end depot to be actual start and deport nodes
 function route_values(route::Array{Int64}, darp::DARP)
@@ -42,7 +37,7 @@ function calc_optimization_val(darp::DARP, raw_routes::Route)
     c = sum([c_of_route(k) for k in keys(routes)])
 
     function max_cap_in_route(k::Int64)
-        return max_of_arr(collect(values(rvalues[k][5])))
+        return maximum(values(rvalues[k][5]))
     end
     max_caps = [max(max_cap_in_route(k) - darp.Q, 0) for (k, route) in routes]
     q = sum(max_caps)

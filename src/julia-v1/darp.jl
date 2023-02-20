@@ -4,7 +4,7 @@ include("parseRequests.jl")
 const DEFAULT_SERVICE_TIME = 2
 const DEFAULT_TW_OFFSET = 5 * 60 # 5 minutes in seconds
 const DEFAULT_WAITTIME_AT_PICKUP = 3 * 60 # 3 minutes in seconds
-const Route = Dict{Int64, Array{Int64}}
+const Route = Dict{Int64,Array{Int64}}
 
 
 struct DARP
@@ -29,7 +29,7 @@ struct DARP
 
         sdInSeconds::Float64 = sd * 60 * 60
         aosInSqMiles::Int64 = trunc(Int64, aos * 0.386102)
-        T_route::Float64 = sdInSeconds
+        T_route::Float64 = sdInSeconds * 0.5
 
         requests = parseData(nR, sd, aos)
         coords::Dict{Int64,Point} = Dict{Int64,Point}([])
@@ -77,10 +77,11 @@ struct DARP
     end
 end
 
-function travel_time(darp::DARP, one::Int64, two::Int64) Int64
+function travel_time(darp::DARP, one::Int64, two::Int64)
     pone = darp.coords[one]
     ptwo = darp.coords[two]
-    ret =  abs(pone.x - ptwo.x) + abs(pone.y - ptwo.y)
-    return ret
+    # since manhattan distance doesnt ofen represent the travel time,
+    # multiple with some coefficient
+    return (abs(pone.x - ptwo.x) + abs(pone.y - ptwo.y))
 end
 
