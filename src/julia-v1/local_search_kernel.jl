@@ -13,14 +13,17 @@ struct MoveParams
     p2::Int64
 end
 
+const TabuMemory = Dict{MoveParams, Int64}
+
 function local_search(darp::DARP, iterations::Int64,
                         N_SIZE::Int64, rawInitRoute::Route)
+    tabuMem = TabuMemory()
     bestRoute::Route = deepcopy(rawInitRoute)
     bestVal::Float64 = calc_optimization_val(darp, bestRoute)
     curRoute = bestRoute
     curVal = bestVal
     for curIteration in 1:iterations
-        newRoute::Route, newVal::Float64 = do_local_search(darp, curRoute, N_SIZE)
+        newRoute::Route, newVal::Float64 = do_local_search!(curIteration, tabuMem, darp, curRoute, N_SIZE)
         if newVal <= bestVal
             bestRoute = deepcopy(newRoute)
             bestVal = newVal
@@ -32,9 +35,9 @@ function local_search(darp::DARP, iterations::Int64,
     return bestRoute, bestVal
 end
 
-function generate_random_moves(nR::Int64, nV::Int64,
-    size::Int64, routes::Route)
-        Array{MoveParams}
+function generate_random_moves(iterationNum::Int64, tabuMem::TabuMemory,
+                                nR::Int64, nV::Int64,
+                                size::Int64, routes::Route) Array{MoveParams}
     moves::Set{MoveParams} = Set([])
     vehicles = collect(nR+1:nR+nV)
     vehicleWeights = Weights(fill(1, nV))
@@ -56,7 +59,7 @@ function generate_random_moves(nR::Int64, nV::Int64,
         p1, p2 = StatsBase.sample(rng, 1:len_k2, Weights(fill(1, len_k2)),
             2, replace=false, ordered=true)
         param = MoveParams(i, k1, k2, p1, p2)
-        if !(param in moves)
+        if !(param in moves) && (get(tabuMem, param, -40) <= iterationNum + 40) # TODO: Remove this constant
             push!(moves, param)
         end
     end
@@ -72,8 +75,12 @@ function apply_move(routes::Route, move::MoveParams)
     return newRoutes
 end
 
-function do_local_search(darp::DARP, routes::Route, N_SIZE::Int64)
-    moves = generate_random_moves(darp.nR, darp.nV, N_SIZE, routes)
+function do_local_search!(iterationNum::Int64, tabuMem::TabuMemory,
+                            darp::DARP, routes::Route, N_SIZE::Int64)
+    moves = generate_random_moves(iterationNum, tabuMem, darp.nR, darp.nV, N_SIZE, routes)
+    for move in moves
+        tabuMem[move] = iterationNum
+    end
     scores = fill(floatmin(Float64), N_SIZE)
     Threads.@threads for tid in 1:N_SIZE
         newRoutes = apply_move(routes, moves[tid])

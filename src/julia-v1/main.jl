@@ -8,7 +8,7 @@ using Base.Threads
 # TODO: Tighten bounds for each route
 
 function main()
-    darp = DARP(50, 2, 10, 5, 1)
+    darp = DARP(500, 2, 10, 5, 1)
     n = 1000 # number of tasks
     routes = fill(Route(), n)
     scores = fill(floatmin(Float64), n)
@@ -18,7 +18,7 @@ function main()
         routes[i] = cur
     end
     _, idx = findmin(scores)
-    local_search(darp, 100, 20, routes[idx])
+    local_search(darp, 1000, 20, routes[idx])
 end
 
 main()
