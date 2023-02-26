@@ -45,7 +45,7 @@ function calc_optimization_val(darp::DARP, raw_routes::Route)
     function duration_of_route(k::Int64)
         return rvalues[k][4][darp.end_depot]
     end
-    d = sum(max(duration_of_route(k) - darp.T_route, 0) for k in keys(routes))
+    d = sum([max(duration_of_route(k) - darp.T_route, 0) for k in keys(routes)])
 
     function late_quantity(k::Int64, i::Int64)
         _, li_pickup = darp.tw[i]
@@ -59,13 +59,14 @@ function calc_optimization_val(darp::DARP, raw_routes::Route)
         return filter((i) -> i != darp.start_depot && i != darp.end_depot, s)
     end
     function total_late_for_route(k::Int64)
-        return sum(late_quantity(k, i) for i in route_requests(k))
+        return sum([late_quantity(k, i) for i in route_requests(k)])
     end
     function total_late(routes::Route)
-        return sum(total_late_for_route(k) for k in keys(routes))
+        lates = [total_late_for_route(k) for k in keys(routes)]
+        return sum(lates)
     end
     # calc the total late for request in all the routes
     w = total_late(routes)
     # println("c = $c | q = $q | d = $d | w = $w")
-    return c + q + d + w
+    return (c + q + d + w) / 1.0
 end

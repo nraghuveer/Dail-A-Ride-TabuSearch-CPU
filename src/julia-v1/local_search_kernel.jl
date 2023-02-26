@@ -1,4 +1,4 @@
-import Threads
+import Base.Threads
 import StatsBase
 import Random
 include("optimization_fn.jl")
@@ -13,20 +13,19 @@ struct MoveParams
     p2::Int64
 end
 
-function local_search(darp::DARP, ITERATIONS::Int64,
-                N_SIZE::Int64, rawInitRoute::Route)
-    bestRoute = rawInitRoute
-    bestVal = calc_optimization_val(darp, bestRoute)
+function local_search(darp::DARP, iterations::Int64,
+                        N_SIZE::Int64, rawInitRoute::Route)
+    bestRoute::Route = deepcopy(rawInitRoute)
+    bestVal::Float64 = calc_optimization_val(darp, bestRoute)
     curRoute = bestRoute
     curVal = bestVal
-    for curIteration in 1::ITERATIONS
-        newRoute = do_local_search(darp, curRoute, N_SIZE)
-        newVal = calc_optimization_val(darp, newRoute)
+    for curIteration in 1:iterations
+        newRoute::Route, newVal::Float64 = do_local_search(darp, curRoute, N_SIZE)
         if newVal <= bestVal
-            bestRoute = newRoute
+            bestRoute = deepcopy(newRoute)
             bestVal = newVal
         end
-        println("${curIteration} - ${newVal}//${bestVal}")
+        println("$(curIteration) - $(newVal) - $(bestVal)")
         curRoute = newRoute
         curVal = newVal
     end
@@ -34,7 +33,8 @@ function local_search(darp::DARP, ITERATIONS::Int64,
 end
 
 function generate_random_moves(nR::Int64, nV::Int64,
-                    size::Int64, routes::Route) Set{MoveParams}
+    size::Int64, routes::Route)
+        Array{MoveParams}
     moves::Set{MoveParams} = Set([])
     vehicles = collect(nR+1:nR+nV)
     vehicleWeights = Weights(fill(1, nV))
@@ -42,37 +42,40 @@ function generate_random_moves(nR::Int64, nV::Int64,
     while length(moves) < size
         seed = seed + 1
         rng = MersenneTwister(seed)
-        k1, k2 = StatsBase.sample(rng, vehicles, vehicleWeights, 2)
+        k1, k2 = StatsBase.sample(rng, vehicles, vehicleWeights, 2, replace=false)
         if length(routes[k1]) == 0
             continue
         end
         # pick a request from k1
         i = StatsBase.sample(rng, routes[k1], Weights(fill(1, length(routes[k1]))), 1)
-        i = abs(i)
-        len_k2 = length(routes[k2])
-        p1, p2 = StatsBase.sample(rng, 1::len_k2+2, Weights(fill(1, len_k2+1)), 2, ordered=true)
+        i = abs(i[1])
+        len_k2::Int64 = length(routes[k2])
+        if len_k2 == 0
+            continue
+        end
+        p1, p2 = StatsBase.sample(rng, 1:len_k2, Weights(fill(1, len_k2)),
+            2, replace=false, ordered=true)
         param = MoveParams(i, k1, k2, p1, p2)
-        if param not in moves
+        if !(param in moves)
             push!(moves, param)
-            break
         end
     end
-    return moves
+    return collect(moves)
 end
 
 function apply_move(routes::Route, move::MoveParams)
     newRoutes = deepcopy(routes)
     # remove "i" from k1 route
-    deleteat!(newRoutes[k1], findall(x -> abs(x) == move.i, newRoutes[k1]))
-    insert!(newRoutes[k2], move.p1, move.i)
-    insert!(newRoutes[k2], move.p2, -move.i)
-    return routes
+    deleteat!(newRoutes[move.k1], findall(x -> abs(x) == move.i, newRoutes[move.k1]))
+    insert!(newRoutes[move.k2], move.p1, move.i)
+    insert!(newRoutes[move.k2], move.p2, -move.i)
+    return newRoutes
 end
 
-function do_local_search(darp::DAPR, routes::Route, N_SIZE::Int64)
+function do_local_search(darp::DARP, routes::Route, N_SIZE::Int64)
     moves = generate_random_moves(darp.nR, darp.nV, N_SIZE, routes)
-    scores = fill(floatmin.Float64, N_SIZE)
-    Threads.@thread for tid in 1::N_SIZE
+    scores = fill(floatmin(Float64), N_SIZE)
+    Threads.@threads for tid in 1:N_SIZE
         newRoutes = apply_move(routes, moves[tid])
         scores[tid] = calc_optimization_val(darp, newRoutes)
     end
