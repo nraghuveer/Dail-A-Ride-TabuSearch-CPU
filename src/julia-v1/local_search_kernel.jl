@@ -13,6 +13,10 @@ struct MoveParams
     p2::Int64
 end
 
+function percentage_improved(old::Float64, new::Float64) Float64
+    return (new * 100) / old
+end
+
 const TabuMemory = Dict{MoveParams, Int64}
 
 function local_search(darp::DARP, iterations::Int64,
@@ -20,6 +24,7 @@ function local_search(darp::DARP, iterations::Int64,
     tabuMem = TabuMemory()
     bestRoute::Route = deepcopy(rawInitRoute)
     bestVal::Float64 = calc_optimization_val(darp, bestRoute)
+    initVal::Float64 = bestVal
     curRoute = bestRoute
     curVal = bestVal
     for curIteration in 1:iterations
@@ -28,7 +33,8 @@ function local_search(darp::DARP, iterations::Int64,
             bestRoute = deepcopy(newRoute)
             bestVal = newVal
         end
-        println("$(curIteration) - $(newVal) - $(bestVal)")
+        improvement = percentage_improved(initVal, bestVal)
+        println("$(curIteration)/$(iterations) | voilation=$(newVal) | improved=$(100 - improvement)%")
         curRoute = newRoute
         curVal = newVal
     end

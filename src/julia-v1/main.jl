@@ -18,7 +18,9 @@ function main()
         routes[i] = cur
     end
     _, idx = findmin(scores)
-    local_search(darp, 1000, 20, routes[idx])
+    N_SIZE = 0.75 * darp.nR
+    total_iterations = darp.nR * 10
+    local_search(darp, total_iterations, trunc(Int64, N_SIZE), routes[idx])
 end
 
 main()
